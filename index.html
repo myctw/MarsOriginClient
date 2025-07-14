@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mars: Origin | 瑪爾斯群英傳: 起源 </title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .formatted-text {
+            white-space: pre-wrap;
+            /*font-family: 'Consolas', 'Courier New', monospace*/
+            font-family: 'Noto Sans Mono CJK';
+            tab-size: 4;
+        }
+        #output {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            background-color: black;
+            color: green;
+            line-height: 18px;
+            margin-right: 440px; /* Add margin to prevent overlap with right panel */
+            /*font-family: 'Consolas', 'Courier New', monospace;*/
+            font-family: 'Noto Sans Mono CJK';
+        }
+        #statusBar {
+            background-color: #1a1a1a;
+            padding: 5px 10px;
+            border-bottom: 1px solid #333;
+        }
+        .status-icon {
+            margin-right: 5px;
+        }
+        .status-effect {
+            color: #666;
+            transition: color 0.3s ease;
+        }
+        .status-effect.active {
+            color: #00ff00;
+        }
+        .status-effect.poison.active {
+            color: #00ff00;
+        }
+        .status-effect.burn.active {
+            color: #ff4500;
+        }
+        .status-effect.bleed.active {
+            color: #ff0000;
+        }
+        .status-hp { color: #ff0000; }
+        .status-mana { color: #4169e1; }
+        .status-move { color: #ffd700; }
+        .status-level {
+            color: #9370db;
+        }
+        .status-exp {
+            color: #ffd700;
+        }
+        .status-gold {
+            color: #ffd700;
+        }
+        .status-attr {
+            color: #87ceeb;
+        }
+        .status-combat-stat {
+            color: #ff6347;
+        }
+        .max-level-hide {
+            display: none !important;
+        }
+        /* Custom breakpoints for status bar */
+        @media (max-width: 1400px) {
+            .status-combat {
+                display: none !important;
+            }
+        }
+        @media (max-width: 1200px) {
+            .status-attributes {
+                display: none !important;
+            }
+        }
+        @media (max-width: 992px) {
+            .status-level,
+            .status-gold {
+                display: none !important;
+            }
+        }
+        .fixed-width {
+            font-family: monospace;
+            display: inline-block;
+        }
+        .hp-width { width: 6ch; }
+        .mana-width { width: 5ch; }
+        .move-width { width: 5ch; }
+        @media (max-width: 1400px) {
+            #output {
+                margin-right: 0; /* Remove margin when right panel is hidden */
+            }
+        }
+        #inputArea {
+            padding: 10px;
+            background-color: black;
+        }
+        #inputBox {
+            background-color: white;
+            color: black;
+        }
+        #sendButton {
+            min-width: 80px;
+        }
+        .progress {
+            height: 10px;
+            margin: 2px 0;
+        }
+        /* New styles for equipment and inventory */
+        .right-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 440px;
+            height: calc(100vh - 100px); /* Subtract status bar height */
+            background-color: #1a1a1a;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .equipment-panel, .inventory-panel {
+            background-color: #2a2a2a;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .equipment-panel h3, .inventory-panel h3 {
+            color: #87ceeb;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .equipment-list, .inventory-list {
+            color: #fff;
+            font-family: monospace;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            height: 340px; /* Fixed height */
+            overflow-y: auto;
+        }
+        /* Hide right panel on smaller screens */
+        @media (max-width: 1400px) {
+            .right-panel {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="container-fluid p-0">
+    <div class="d-flex flex-column h-100">
+        <div id="output" class="formatted-text flex-grow-1"></div>
+        <!-- 目標資訊列 -->
+        <div id="targetInfoBar" class="d-flex flex-row align-items-center mb-1" style="font-size: 1.2em;">
+            <span class="target-icon me-1" style="color:#ff4444;font-size:1.3em;"><i class="fas fa-gavel"></i></span>
+            <span id="targetName" style="color:#ff4444;min-width:90px;"></span>
+            <span id="targetHp" style="color:#ff4444;min-width:90px;"></span>
+            <span class="target-arrow-icon ms-1 me-2" style="color:#ffe066;font-size:1.3em;"><i class="fas fa-angle-double-right"></i></span>
+            <span id="targetTargetName" style="color:#ffe066"></span>
+            <span id="targetTargetHp" style="color:#ffe066"></span>
+        </div>
+        <div id="statusBar" class="d-flex flex-wrap align-items-center gap-3">
+            <div class="status-effects d-flex gap-3">
+                <span class="status-effect poison">
+                    <i class="fas fa-skull-crossbones status-icon"></i>中毒
+                </span>
+                <span class="status-effect burn">
+                    <i class="fas fa-fire status-icon"></i>灼傷
+                </span>
+                <span class="status-effect bleed">
+                    <i class="fas fa-tint status-icon"></i>流血
+                </span>
+            </div>
+            <div class="status-hp">
+                <i class="fas fa-heart status-icon"></i>HP: <span id="currentHp" class="fixed-width hp-width">0</span>/<span id="maxHp" class="fixed-width hp-width">0</span>
+                <div class="progress">
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="status-mana">
+                <i class="fas fa-magic status-icon"></i>Mana: <span id="currentMana" class="fixed-width mana-width">0</span>/<span id="maxMana" class="fixed-width mana-width">0</span>
+                <div class="progress">
+                    <div class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="status-move">
+                <i class="fas fa-walking status-icon"></i>Move: <span id="currentMove" class="fixed-width move-width">0</span>/<span id="maxMove" class="fixed-width move-width">0</span>
+                <div class="progress">
+                    <div class="progress-bar bg-warning" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="status-level d-none d-lg-flex">
+                <i class="fas fa-level-up-alt status-icon"></i>等級: <span id="level" class="fixed-width">0</span>
+            </div>
+            <div class="status-exp d-none d-xl-flex max-level-hide">
+                <i class="fas fa-star status-icon"></i>經驗: <span id="exp" class="fixed-width">0%</span>
+            </div>
+            <div class="status-gold d-none d-lg-flex">
+                <i class="fas fa-coins status-icon"></i>金: <span id="gold" class="fixed-width">0</span>
+            </div>
+            <div class="status-attributes d-flex gap-3 d-none d-xl-flex">
+                <span class="status-attr">
+                    <i class="fas fa-fist-raised status-icon"></i>力: <span id="str" class="fixed-width">0</span>
+                </span>
+                <span class="status-attr">
+                    <i class="fas fa-brain status-icon"></i>智: <span id="int" class="fixed-width">0</span>
+                </span>
+                <span class="status-attr">
+                    <i class="fas fa-book status-icon"></i>學: <span id="wis" class="fixed-width">0</span>
+                </span>
+                <span class="status-attr">
+                    <i class="fas fa-running status-icon"></i>敏: <span id="dex" class="fixed-width">0</span>
+                </span>
+                <span class="status-attr">
+                    <i class="fas fa-shield-alt status-icon"></i>體: <span id="con" class="fixed-width">0</span>
+                </span>
+            </div>
+            <div class="status-combat d-flex gap-3 d-none d-xxl-flex">
+                <span class="status-combat-stat">
+                    <i class="fas fa-shield-alt status-icon"></i>防: <span id="armor" class="fixed-width">0</span>
+                </span>
+                <span class="status-combat-stat">
+                    <i class="fas fa-meteor status-icon"></i>傷: <span id="damRoll" class="fixed-width">0</span>
+                </span>
+                <span class="status-combat-stat">
+                    <i class="fas fa-crosshairs status-icon"></i>命中: <span id="hitRate" class="fixed-width">0</span>
+                </span>
+            </div>
+        </div>
+        <div id="inputArea" class="d-flex align-items-center gap-2">
+            <input type="text" id="inputBox" class="form-control" placeholder="輸入指令..." autofocus spellcheck="false" autocomplete="off">
+            <button id="sendButton" class="btn btn-primary">發送</button>
+        </div>
+    </div>
+
+    <!-- Right panel for equipment and inventory -->
+    <div class="right-panel">
+        <div class="equipment-panel">
+            <h3>裝備</h3>
+            <div id="equipmentList" class="equipment-list"></div>
+        </div>
+        <div class="inventory-panel">
+            <h3>物品</h3>
+            <div id="inventoryList" class="inventory-list"></div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const SERVER_URL = 'ws://114.32.71.180:8888'; // MUD伺服器地址
+        const outputDiv = document.getElementById('output');
+        const inputBox = document.getElementById('inputBox');
+        const sendButton = document.getElementById('sendButton');
+        const localStorageTag = 'marsII'
+        const localStorageExpiredSecond = '5'
+        const localStorageMulti = 'multi'
+        const MAX_OUTPUT_LINES = 200; // 最大輸出行數
+        const MAX_COMMAND_HISTORY = 10; // 最大命令歷史記錄數
+
+        let ws;
+        let inactivityTimer;
+        let commandHistory = []; // 儲存命令歷史
+        let currentHistoryIndex = -1; // 當前歷史記錄索引
+
+        function checkLocalStorage() {
+            const itemStr = localStorage.getItem(localStorageTag);
+            if (!itemStr) return;
+            
+            const item = JSON.parse(itemStr);
+            const now = new Date();
+            if (now.getTime() > item.expiry) {
+                localStorage.removeItem(localStorageTag);
+                return;
+            }
+        
+            return item;    
+        }
+
+        // Status update handling
+        function updateStatus(data) {
+            // Update status effects
+            document.querySelector('.status-effect.poison').classList.toggle('active', data.status.poison);
+            document.querySelector('.status-effect.burn').classList.toggle('active', data.status.burn);
+            document.querySelector('.status-effect.bleed').classList.toggle('active', data.status.bleed);
+
+            // Update Target Info Bar
+            const targetName = data.target.targetName;
+            const targetHp = data.target.targetHp;
+            const targetTargetName = data.target.targetTargetName;
+            const targetTargetHp = data.target.targetTargetHp;
+            const targetNameSpan = document.getElementById('targetName');
+            const targetHpSpan = document.getElementById('targetHp');
+            const targetTargetNameSpan = document.getElementById('targetTargetName');
+            const targetTargetHpSpan = document.getElementById('targetTargetHp');
+            const targetInfoBar = document.getElementById('targetInfoBar');
+            if (targetName) {
+                targetInfoBar.style.display = 'flex';
+                document.querySelector('.target-icon').style.display = '';
+                document.querySelector('.target-arrow-icon').style.display = '';
+                targetNameSpan.textContent = targetName;
+                if (targetHp && targetHp.max > 0) {
+                    const percent = Math.round((targetHp.current / targetHp.max) * 100);
+                    targetHpSpan.textContent = `(${percent}%)`;
+                } else {
+                    targetHpSpan.textContent = '';
+                }
+                if (targetTargetName) {
+                    targetTargetNameSpan.textContent = targetTargetName;
+                    if (targetTargetHp && targetTargetHp.max > 0) {
+                        const percent2 = Math.round((targetTargetHp.current / targetTargetHp.max) * 100);
+                        targetTargetHpSpan.textContent = `(${percent2}%)`;
+                    } else {
+                        targetTargetHpSpan.textContent = '';
+                    }
+                } else {
+                    targetTargetNameSpan.textContent = '';
+                    targetTargetHpSpan.textContent = '';
+                }
+            } else {
+                targetNameSpan.textContent = '';
+                targetHpSpan.textContent = '';
+                targetTargetNameSpan.textContent = '';
+                targetTargetHpSpan.textContent = '';
+                targetInfoBar.style.display = 'none';
+                document.querySelector('.target-icon').style.display = 'none';
+                document.querySelector('.target-arrow-icon').style.display = 'none';
+            }
+
+            document.getElementById('currentHp').textContent = String(data.hp.current);
+            document.getElementById('maxHp').textContent = String(data.hp.max);
+            const hpPercent = (data.hp.current / data.hp.max) * 100;
+            document.querySelector('.status-hp .progress-bar').style.width = `${hpPercent}%`;
+
+            document.getElementById('currentMana').textContent = String(data.mana.current);
+            document.getElementById('maxMana').textContent = String(data.mana.max);
+            const manaPercent = (data.mana.current / data.mana.max) * 100;
+            document.querySelector('.status-mana .progress-bar').style.width = `${manaPercent}%`;
+
+            document.getElementById('currentMove').textContent = String(data.move.current);
+            document.getElementById('maxMove').textContent = String(data.move.max);
+            const movePercent = (data.move.current / data.move.max) * 100;
+            document.querySelector('.status-move .progress-bar').style.width = `${movePercent}%`;
+
+            document.getElementById('level').textContent = String(data.level || 0);
+
+            const level = data.level || 0;
+            const expElement = document.querySelector('.status-exp');
+            if (level >= 50) {
+                expElement.classList.add('max-level-hide');
+            } else {
+                expElement.classList.remove('max-level-hide');
+                const exp = data.exp || 0;
+                const expCap = data.expCap || 1;
+                const expPercent = Math.floor((exp / expCap) * 100);
+                document.getElementById('exp').textContent = `${expPercent}%`;
+            }
+
+            document.getElementById('gold').textContent = String(data.gold || 0);
+
+            document.getElementById('str').textContent = String(data.attributes.str || 0);
+            document.getElementById('int').textContent = String(data.attributes.int || 0);
+            document.getElementById('wis').textContent = String(data.attributes.wis || 0);
+            document.getElementById('dex').textContent = String(data.attributes.dex || 0);
+            document.getElementById('con').textContent = String(data.attributes.con || 0);
+
+            document.getElementById('armor').textContent = String(data.combat.armor || 0);
+            document.getElementById('damRoll').textContent = String(data.combat.damRoll || 0);
+            document.getElementById('hitRate').textContent = String(data.combat.hitRate || 0);
+        }
+
+        function updateEqInv(data) {
+            const equipmentList = document.getElementById('equipmentList');
+            if (!data.eq) {
+                equipmentList.innerHTML = '無裝備';
+            } else {
+                equipmentList.innerHTML = data.eq;
+            }
+
+            const inventoryList = document.getElementById('inventoryList');
+            if (!data.eq || data.eq.length === 0) {
+                inventoryList.innerHTML = '無物品';
+            } else {
+                inventoryList.innerHTML = data.inv;
+            }
+        }
+
+        function connect() {
+            // 檢查是否已有連線
+            /*
+            const item = checkLocalStorage();
+            if (item) {
+                outputDiv.innerHTML += '<p>已有其他連線，本分頁將自動中斷。\n</p>';
+                outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
+                return; // 不再嘗試連線
+            }
+            */
+            ws = new WebSocket(SERVER_URL);
+
+            ws.onopen = () => {
+                setTag(); // 設置連線標記
+                outputDiv.innerHTML += '<span style="color: white;">Mars: Origin | 瑪爾斯群英傳: 起源</span>';
+                outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
+                resetInactivityTimer(); // 重置非活動計時器
+            };
+
+            ws.onmessage = (event) => {
+                
+                let result = isJson(event.data);
+                if (result) {
+                    const pData = JSON.parse(event.data);
+                    if (pData.type === 'status') {
+                        updateStatus(pData);
+                    }else if (pData.type === 'eqinv') {
+                        updateEqInv(pData);
+                    }
+                
+                }else{
+                    outputDiv.innerHTML += `<p>${event.data}</p>`;
+                    // 檢查並限制輸出行數
+                    while (outputDiv.childNodes.length > MAX_OUTPUT_LINES) {
+                        outputDiv.removeChild(outputDiv.firstChild);
+                    }
+                }
+                outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
+                resetInactivityTimer(); // 重置非活動計時器
+                setTag(); // 設置連線標記
+            };
+
+
+
+            ws.onclose = () => {
+                outputDiv.innerHTML += '<span style="color: red;">與伺服器中斷連線。</p>';
+                outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
+                removeTag(); // 清除連線標記
+                disconnect();
+                setTimeout(connect, 10000); // 10秒後嘗試重新連接
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket 錯誤:', error);
+                outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
+            };
+        }
+
+        function isJson(data) {
+            try{
+                JSON.parse(event.data);
+                return true;
+            }catch(e){
+                return false;
+            }
+        }
+
+        function sendMessage(message) {
+            if (!message) {
+                message = inputBox.value.trim();
+            }
+
+            if (message) {
+                ws.send(JSON.stringify(message));
+                outputDiv.innerHTML += '<span style="color: yellow;">'+message+'</p>';
+                
+                // 添加到命令歷史
+                if (!commandHistory.includes(message)) {
+                    commandHistory.unshift(message);
+                    if (commandHistory.length > MAX_COMMAND_HISTORY) {
+                        commandHistory.pop();
+                    }
+                }
+                currentHistoryIndex = -1; // 重置歷史索引
+                
+                outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
+                inputBox.select(); // 全选文本
+                resetInactivityTimer(); // 重置非活動計時器
+            }
+        }
+
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                sendLogoutMessage();
+                removeTag(); // 清除連線標記
+                disconnect();
+            }, 300000); // 300秒後登出並斷開連接
+        }
+
+        function sendLogoutMessage() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                //ws.send(JSON.stringify('IdleLogout')); // 發送登出訊息
+                outputDiv.innerHTML += '<span style="color: yellow;">超過300秒沒有動作，系統已自動登出</p>';
+                //disconnect();
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close(); // 關閉WebSocket連接
+                ws = null; // 清空ws變數
+            }
+            resetUI();
+        }
+
+        function setTag() {
+            const now = new Date();
+            const expiryTime = now.getTime() + localStorageExpiredSecond * 1000; // 計算過期時間
+            const item = { localStorageMulti: true, expiry: expiryTime };
+            localStorage.setItem(localStorageTag, JSON.stringify(item));
+        }
+
+        function removeTag() {
+            localStorage.removeItem(localStorageTag);
+        }
+
+        sendButton.onclick = sendMessage;
+
+        inputBox.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                sendMessage();
+                event.preventDefault(); // 防止表單提交
+            }
+        });
+
+        // 添加上下鍵處理
+        inputBox.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (currentHistoryIndex < commandHistory.length - 1) {
+                    currentHistoryIndex++;
+                    inputBox.value = commandHistory[currentHistoryIndex];
+                    inputBox.select();
+                }
+            } else if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if (currentHistoryIndex > -1) {
+                    currentHistoryIndex--;
+                    inputBox.value = currentHistoryIndex === -1 ? '' : commandHistory[currentHistoryIndex];
+                    inputBox.select();
+                }
+            }
+        });
+
+        // max 50 chars
+        inputBox.addEventListener('input', () => {
+            if (inputBox.value.length > 50) {
+                inputBox.value = inputBox.value.slice(0, 50);
+            }
+        });
+
+        connect();
+        window.onload = () => {
+            checkLocalStorage(); // 檢查 localStorage 是否有過期資料
+        };
+
+        // 綁定數字鍵盤方向鍵
+        document.addEventListener('keydown', (event) => {
+            if (event.code.startsWith('Numpad')) {
+                let cmd = '';
+                switch (event.code) {
+                    case 'Numpad4': cmd = 'west'; break;
+                    case 'Numpad5': cmd = 'look'; break;
+                    case 'Numpad6': cmd = 'east'; break;
+                    case 'Numpad8': cmd = 'north'; break;
+                    case 'Numpad2': cmd = 'south'; break;
+                    case 'Numpad9': cmd = 'up'; break;
+                    case 'Numpad3': cmd = 'down'; break;
+                }
+                if (cmd) {
+                    //inputBox.value = cmd;
+                    sendMessage(cmd);
+                    event.preventDefault();
+                }
+            }
+        });
+
+    // 玩家中斷時重置 UI
+    function resetUI() {
+        const inputBox = document.getElementById('inputBox');
+        if (inputBox) inputBox.value = '';
+
+        document.getElementById('targetName').textContent = '';
+        document.getElementById('targetHp').textContent = '';
+        document.getElementById('targetTargetName').textContent = '';
+        document.getElementById('targetTargetHp').textContent = '';
+        document.getElementById('targetInfoBar').style.display = 'none';
+        document.querySelector('.target-icon').style.display = 'none';
+        document.querySelector('.target-arrow-icon').style.display = 'none';
+        
+        const statusBar = document.getElementById('statusBar');
+        if (statusBar) {
+            document.querySelector('.status-effect.poison').classList.remove('active');
+            document.querySelector('.status-effect.burn').classList.remove('active');
+            document.querySelector('.status-effect.bleed').classList.remove('active');
+
+            document.getElementById('currentHp').textContent = '0';
+            document.getElementById('maxHp').textContent = '0';
+            document.querySelector('.status-hp .progress-bar').style.width = '0%';
+
+            document.getElementById('currentMana').textContent = '0';
+            document.getElementById('maxMana').textContent = '0';
+            document.querySelector('.status-mana .progress-bar').style.width = '0%';
+
+            document.getElementById('currentMove').textContent = '0';
+            document.getElementById('maxMove').textContent = '0';
+            document.querySelector('.status-move .progress-bar').style.width = '0%';
+
+            document.getElementById('level').textContent = '0';
+            document.getElementById('exp').textContent = '0%';
+            document.getElementById('gold').textContent = '0';
+
+            document.getElementById('str').textContent = '0';
+            document.getElementById('int').textContent = '0';
+            document.getElementById('wis').textContent = '0';
+            document.getElementById('dex').textContent = '0';
+            document.getElementById('con').textContent = '0';
+
+            document.getElementById('armor').textContent = '0';
+            document.getElementById('damRoll').textContent = '0';
+            document.getElementById('hitRate').textContent = '0';
+        }
+
+        const eqArea = document.getElementById('equipmentList');
+        if (eqArea) eqArea.innerHTML = '';
+        const invArea = document.getElementById('inventoryList');
+        if (invArea) invArea.innerHTML = '';
+    }
+    </script>
+
+</body>
+</html>
