@@ -35,7 +35,7 @@
         }
         #statusBar {
             background-color: #1a1a1a;
-            padding: 5px 10px;
+            padding: 1px 10px;
             border-bottom: 1px solid #333;
         }
         .status-icon {
@@ -113,7 +113,7 @@
             font-family: monospace;
             display: inline-block;
         }
-        .hp-width { width: 6ch; }
+        .hp-width { width: 5ch; }
         .mana-width { width: 5ch; }
         .move-width { width: 5ch; }
         @media (max-width: 1400px) {
@@ -122,7 +122,7 @@
             }
         }
         #inputArea {
-            padding: 10px;
+            padding: 5px;
             background-color: black;
         }
         #inputBox {
@@ -130,11 +130,11 @@
             color: black;
         }
         #sendButton {
-            min-width: 80px;
+            min-width: 60px;
         }
         .progress {
-            height: 10px;
-            margin: 2px 0;
+            height: 8px;
+            margin: 1px 0;
         }
         /* New styles for equipment and inventory */
         .right-panel {
@@ -277,7 +277,7 @@
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const SERVER_URL = 'wss://wssmo.myctw.cc:8888';
+        const SERVER_URL = 'wss://192.168.0.212:8888'; // MUD伺服器地址
         const outputDiv = document.getElementById('output');
         const inputBox = document.getElementById('inputBox');
         const sendButton = document.getElementById('sendButton');
