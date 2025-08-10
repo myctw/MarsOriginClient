@@ -30,8 +30,9 @@
             color: green;
             line-height: 18px;
             margin-right: 440px; /* Add margin to prevent overlap with right panel */
-            /*font-family: 'Consolas', 'Courier New', monospace;*/
-            font-family: 'Noto Sans Mono CJK';
+            font-family: 'Consolas', 'Courier New', monospace;
+            white-space: pre;
+            /*font-family: 'Noto Sans Mono CJK';*/
         }
         #statusBar {
             background-color: #1a1a1a;
@@ -174,11 +175,74 @@
                 display: none;
             }
         }
+        /* 九宮格按鈕樣式 */
+        .mobile-numpad {
+        display: none;
+        position: absolute; /* 讓它浮在畫面右側 */
+        top: 60%;
+        right: 0;
+        transform: translateY(-50%); /* 以自身高度一半往上拉，讓中心對齊 */
+        margin: 0;
+        width: auto;
+        opacity: 0.7;
+        background: none;   /* 去掉底色 */
+        border-radius: 0;
+        padding: 0;
+        z-index: 10;
+        }
+        .numpad-row {
+        display: flex;
+        justify-content: flex-end; /* 靠右 */
+        }
+        .numpad-btn {
+        width: 48px;
+        height: 48px;
+        margin: 0;                /* 沒有間隔 */
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #ffffff3f;
+        background: #7660f51f;         /* 去掉底色 */
+        border: none;
+        border-radius: 12px;
+        outline: none;
+        transition: background 0.2s;
+        }
+        .numpad-btn:active {
+        background: rgba(0,0,0,0.2);
+        }
+        .numpad-btn[style*="visibility:hidden"] {
+        background: none;
+        border: none;
+        pointer-events: none;
+        }
+        @media (max-width: 768px) {
+        .mobile-numpad {
+            display: block;
+        }
+        }
     </style>
 </head>
 <body class="container-fluid p-0">
     <div class="d-flex flex-column h-100">
         <div id="output" class="formatted-text flex-grow-1"></div>
+        <!-- 九宮格方向按鈕 (只在 mobile 顯示) -->
+        <div class="mobile-numpad">
+            <div class="numpad-row">
+            <button class="numpad-btn" id="eqbtn">裝</button>
+            <button class="numpad-btn">N</button>
+            <button class="numpad-btn">U</button>
+            </div>
+            <div class="numpad-row">
+            <button class="numpad-btn">W</button>
+            <button class="numpad-btn">L</button>
+            <button class="numpad-btn">E</button>
+            </div>
+            <div class="numpad-row">
+            <button class="numpad-btn" id="invbtn">道</button>
+            <button class="numpad-btn">S</button>
+            <button class="numpad-btn">D</button>
+            </div>
+        </div>         
         <!-- 目標資訊列 -->
         <div id="targetInfoBar" class="d-flex flex-row align-items-center mb-1" style="font-size: 1.2em;">
             <span class="target-icon me-1" style="color:#ff4444;font-size:1.3em;"><i class="fas fa-gavel"></i></span>
@@ -277,10 +341,13 @@
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        //const SERVER_URL = 'wss://192.168.0.212:8888'; // MUD伺服器地址
         const SERVER_URL = 'wss://wssmo.myctw.cc:8888'; // MUD伺服器地址
         const outputDiv = document.getElementById('output');
         const inputBox = document.getElementById('inputBox');
         const sendButton = document.getElementById('sendButton');
+        const eqbtn = document.getElementById('eqbtn');
+        const invbtn = document.getElementById('invbtn');
         const localStorageTag = 'marsII'
         const localStorageExpiredSecond = '5'
         const localStorageMulti = 'multi'
@@ -304,6 +371,41 @@
             }
         
             return item;    
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+        // 定義要監聽的按鈕字母
+        const btns = ['N', 'U', 'W', 'L', 'E', 'S', 'D'];
+        btns.forEach(letter => {
+            document.querySelectorAll('.numpad-btn').forEach(btn => {
+            if (btn.textContent === letter) {
+                btn.addEventListener('click', function() {
+                // 送出對應小寫字母
+                sendNumpadMessage(letter.toLowerCase());
+                });
+            }
+            });
+        });
+        });
+        eqbtn.addEventListener('click', function() {
+            sendNumpadMessage('eq');
+        });
+        invbtn.addEventListener('click', function() {
+            sendNumpadMessage('inv');
+        });
+
+        // 這個 function 會模擬和 sendButton 一樣的送出行為
+        function sendNumpadMessage(msg) {
+        // 假設原本 sendButton 的 click 事件會呼叫 sendMessage(msg)
+        // 你可以直接呼叫 sendMessage(msg)
+        if (typeof sendMessage === 'function') {
+            sendMessage(msg);
+        } else {
+            // 或者模擬 inputBox 輸入並觸發 sendButton
+            const inputBox = document.getElementById('inputBox');
+            inputBox.value = msg;
+            document.getElementById('sendButton').click();
+        }
         }
 
         // Status update handling
