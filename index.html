@@ -22,17 +22,43 @@
             font-family: 'Noto Sans Mono CJK';
             tab-size: 4;
         }
+        #output-container {
+            flex: 1;
+            position: relative;
+            margin-right: 440px;
+            background-color: black;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        #output-top {
+            flex: 0 0 auto;
+            max-height: 0;
+            overflow-y: auto;
+            padding: 12px;
+            background-color: black;
+            color: inherit;  /* 繼承父元素的顏色 */
+            line-height: 18px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            white-space: pre;
+            opacity: 0;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid transparent;
+        }
         #output {
             flex: 1;
             padding: 12px;
             overflow-y: auto;
             background-color: black;
-            /*color: rgb(255, 255, 255);*/
             line-height: 18px;
-            margin-right: 440px; /* Add margin to prevent overlap with right panel */
             font-family: 'Consolas', 'Courier New', monospace;
             white-space: pre;
-            /*font-family: 'Noto Sans Mono CJK';*/
+        }
+        .split-view #output-top {
+            max-height: 50%;
+            opacity: 1;
+            border-bottom: 1px solid #333;
         }
         #statusBar {
             background-color: #1a1a1a;
@@ -118,7 +144,7 @@
         .mana-width { width: 5ch; }
         .move-width { width: 5ch; }
         @media (max-width: 1400px) {
-            #output {
+            #output-container {
                 margin-right: 0; /* Remove margin when right panel is hidden */
             }
         }
@@ -224,11 +250,14 @@
 </head>
 <body class="container-fluid p-0">
     <div class="d-flex flex-column h-100">
-        <div id="output" class="formatted-text flex-grow-1"></div>
+        <div id="output-container">
+            <div id="output-top" class="formatted-text"></div>
+            <div id="output" class="formatted-text"></div>
+        </div>
         <!-- 九宮格方向按鈕 (只在 mobile 顯示) -->
         <div class="mobile-numpad">
             <div class="numpad-row">
-            <button class="numpad-btn" id="eqbtn">裝</button>
+            <button class="numpad-btn" id="fleeBtn">逃</button>
             <button class="numpad-btn">N</button>
             <button class="numpad-btn">U</button>
             </div>
@@ -355,16 +384,23 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const SERVER_URL = 'wss://wssmo.myctw.cc:443'; // MUD伺服器地址
+        const outputContainer = document.getElementById('output-container');
+        const outputTop = document.getElementById('output-top');
         const outputDiv = document.getElementById('output');
         const inputBox = document.getElementById('inputBox');
         const sendButton = document.getElementById('sendButton');
-        const eqbtn = document.getElementById('eqbtn');
+        const fleeBtn = document.getElementById('fleeBtn');
         const invbtn = document.getElementById('invbtn');
         const localStorageTag = 'marsII'
         const localStorageExpiredSecond = '5'
         const localStorageMulti = 'multi'
         const MAX_OUTPUT_LINES = 200; // 最大輸出行數
         const MAX_COMMAND_HISTORY = 10; // 最大命令歷史記錄數
+
+        let isSplitting = false;
+        let isUserScrolling = false;
+        let scrollTimer;
+        let autoScroll = true;
 
         let ws;
         let inactivityTimer;
@@ -385,22 +421,107 @@
             return item;    
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-        // 定義要監聽的按鈕字母
-        const btns = ['N', 'U', 'W', 'L', 'E', 'S', 'D'];
-        btns.forEach(letter => {
-            document.querySelectorAll('.numpad-btn').forEach(btn => {
-            if (btn.textContent === letter) {
-                btn.addEventListener('click', function() {
-                // 送出對應小寫字母
-                sendNumpadMessage(letter.toLowerCase());
-                });
+        // 初始化滾動事件監聽
+        function initScrollHandlers() {
+            // 監聽 output 的滾動事件
+            outputDiv.addEventListener('scroll', handleOutputScroll);
+            
+            // 監聽 output-top 的滾動事件
+            outputTop.addEventListener('scroll', handleTopScroll);
+            
+            // 監聽滾輪事件來檢測用戶滾動
+            outputDiv.addEventListener('wheel', () => {
+                isUserScrolling = true;
+                clearTimeout(scrollTimer);
+                scrollTimer = setTimeout(() => {
+                    isUserScrolling = false;
+                }, 1000);
+            });
+            
+            // 定期檢查是否需要自動滾動
+            setInterval(checkAutoScroll, 100);
+        }
+        
+        // 處理 output 的滾動事件
+        function handleOutputScroll() {
+            // 如果已經在分割模式，不處理
+            if (isSplitting) return;
+            
+            // 如果用戶向上滾動，切換到分割模式
+            if (outputDiv.scrollTop < outputDiv.scrollHeight - outputDiv.clientHeight - 10) {
+                splitOutput();
             }
+        }
+        
+        // 處理頂部視窗的滾動事件
+        function handleTopScroll() {
+            // 如果滾動到底部，合併視窗
+            if (outputTop.scrollHeight - outputTop.scrollTop - outputTop.clientHeight < 10) {
+                mergeOutput();
+            }
+        }
+        
+        // 分割視窗
+        function splitOutput() {
+            if (isSplitting) return;
+            
+            // 複製內容到頂部視窗
+            outputTop.innerHTML = outputDiv.innerHTML;
+            
+            // 設置滾動位置
+            const scrollRatio = outputDiv.scrollTop / (outputDiv.scrollHeight - outputDiv.clientHeight);
+            const topScrollPos = (outputTop.scrollHeight - outputTop.clientHeight) * (1 - scrollRatio);
+            outputTop.scrollTop = topScrollPos;
+            
+            // 添加分割視窗樣式
+            outputContainer.classList.add('split-view');
+            isSplitting = true;
+            
+            // 滾動到底部視窗
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+        
+        // 合併視窗
+        function mergeOutput() {
+            if (!isSplitting) return;
+            
+            // 移除分割視窗樣式
+            outputContainer.classList.remove('split-view');
+            isSplitting = false;
+            
+            // 清空頂部視窗內容
+            outputTop.innerHTML = '';
+            
+            // 滾動到底部
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+        
+        // 檢查是否需要自動滾動
+        function checkAutoScroll() {
+            if (!isUserScrolling && !isSplitting) {
+                outputDiv.scrollTop = outputDiv.scrollHeight;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化滾動處理
+            initScrollHandlers();
+            
+            // 定義要監聽的按鈕字母
+            const btns = ['N', 'U', 'W', 'L', 'E', 'S', 'D'];
+            btns.forEach(letter => {
+                document.querySelectorAll('.numpad-btn').forEach(btn => {
+                    if (btn.textContent === letter) {
+                        btn.addEventListener('click', function() {
+                            // 送出對應小寫字母
+                            sendNumpadMessage(letter.toLowerCase());
+                        });
+                    }
+                });
             });
         });
-        });
-        eqbtn.addEventListener('click', function() {
-            sendNumpadMessage('eq');
+        fleeBtn.addEventListener('click', function() {
+            sendNumpadMessage('flee');
         });
         invbtn.addEventListener('click', function() {
             sendNumpadMessage('inv');
@@ -408,16 +529,16 @@
 
         // 這個 function 會模擬和 sendButton 一樣的送出行為
         function sendNumpadMessage(msg) {
-        // 假設原本 sendButton 的 click 事件會呼叫 sendMessage(msg)
-        // 你可以直接呼叫 sendMessage(msg)
-        if (typeof sendMessage === 'function') {
-            sendMessage(msg);
-        } else {
-            // 或者模擬 inputBox 輸入並觸發 sendButton
-            const inputBox = document.getElementById('inputBox');
-            inputBox.value = msg;
-            document.getElementById('sendButton').click();
-        }
+            // 假設原本 sendButton 的 click 事件會呼叫 sendMessage(msg)
+            // 你可以直接呼叫 sendMessage(msg)
+            if (typeof sendMessage === 'function') {
+                sendMessage(msg);
+            } else {
+                // 或者模擬 inputBox 輸入並觸發 sendButton
+                const inputBox = document.getElementById('inputBox');
+                inputBox.value = msg;
+                document.getElementById('sendButton').click();
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -664,7 +785,7 @@
 
             if (message) {
                 ws.send(JSON.stringify(message));
-                outputDiv.innerHTML += '<span style="color: yellow;">'+message+'</p>';
+                outputDiv.innerHTML += '<span style="color: yellow;">'+message+'</span>\n';
                 
                 // 添加到命令歷史
                 if (!commandHistory.includes(message)) {
