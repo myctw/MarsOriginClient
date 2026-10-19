@@ -876,7 +876,10 @@
             ws = new WebSocket(SERVER_URL);
             ws.onopen = () => {
                 setTag(); // 設置連線標記
-                outputDiv.innerHTML += '<span style="color: white;">Mars: Origin | 瑪爾斯群英傳: 起源</span>';
+                outputDiv.innerHTML +=
+                    '<p><img src="https://marsorigin.myctw.cc/assets/images/logo.jpg" ' +
+                    'alt="Mars: Origin" ' +
+                    'style="max-width: 100%; height: auto; display: block;"></p>';
                 outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
                 resetInactivityTimer(); // 重置非活動計時器
             };
