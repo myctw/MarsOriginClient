@@ -502,6 +502,10 @@
         let commandHistory = []; // 儲存命令歷史
         let currentHistoryIndex = -1; // 當前歷史記錄索引
 
+        function logWs(event, detail = '') {
+            console.log(`[WS ${new Date().toISOString()}] ${event}`,detail);
+        }
+
         function canUseSplitView() {
             return window.matchMedia('(min-width: 769px)').matches;
         }
@@ -882,6 +886,7 @@
                     'style="max-width: 100%; height: auto; display: block;"></p>';
                 outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
                 resetInactivityTimer(); // 重置非活動計時器
+                logWs('OPEN', `url=${SERVER_URL}`);
             };
 
             ws.onmessage = (event) => {
@@ -923,6 +928,12 @@
 
 
             ws.onclose = () => {
+                logWs('CLOSE', {
+                    code: event.code,
+                    reason: event.reason,
+                    wasClean: event.wasClean,
+                    readyState: ws.readyState
+                });
                 outputDiv.innerHTML += '<span style="color: red;">與伺服器中斷連線。</p>';
                 outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
                 removeTag(); // 清除連線標記
@@ -932,6 +943,7 @@
 
             ws.onerror = (error) => {
                 console.error('WebSocket 錯誤:', error);
+                logWs('ERROR', 'WebSocket error; see close event for details '+ error);
                 outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
             };
         }
