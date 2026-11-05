@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mars: Origin | 瑪爾斯群英傳: 起源 </title>
+    <link rel="icon" type="image/png" href="./assets/images/MO_ICON2.png">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -90,36 +91,13 @@
         .status-level {
             color: #9370db;
         }
-        .status-exp {
-            color: #ffd700;
-        }
         .status-gold {
             color: #ffd700;
-        }
-        .status-attr {
-            color: #87ceeb;
         }
         .status-combat-stat {
             color: #ff6347;
         }
-        .max-level-hide {
-            display: none !important;
-        }
-        /* Custom breakpoints for status bar */
-        @media (max-width: 1400px) {
-            .status-combat {
-                display: none !important;
-            }
-        }
-        @media (max-width: 1200px) {
-            .status-attributes {
-                display: none !important;
-            }
-        }
         @media (max-width: 576px) {
-            .status-effects {
-                display: none !important;
-            }
             #statusBar {
                 flex-wrap: nowrap !important;
                 overflow-x: auto;
@@ -129,12 +107,6 @@
                 flex: 1 1 0;
             }
             .status-label { display: none !important; }
-        }
-        @media (max-width: 992px) {
-            .status-level,
-            .status-gold {
-                display: none !important;
-            }
         }
         .fixed-width {
             font-family: monospace;
@@ -183,6 +155,176 @@
         }
         #sendButton {
             min-width: 60px;
+        }
+        #inputArea {
+            position: relative;
+        }
+        #themeSelector {
+            width: 42px;
+            height: 38px;
+            flex: 0 0 auto;
+        }
+        #settingsPanel[hidden] {
+            display: none !important;
+        }
+        #settingsPanel {
+            position: absolute;
+            z-index: 1100;
+            right: 4px;
+            bottom: calc(100% + 10px);
+            width: min(460px, calc(100vw - 24px));
+            min-height: 540px;
+            padding: 28px 24px 24px;
+            color: #382719;
+            border: 0;
+            background:
+                radial-gradient(ellipse at 50% 0, #fff4ce99, transparent 70%),
+                repeating-linear-gradient(3deg, #ddc28c 0, #e8d5a9 2px, #dfc995 4px, #e8d5a9 7px);
+            box-shadow: 0 12px 32px #000b, inset 0 0 24px #90652c55;
+            font-family: Georgia, "Noto Serif CJK TC", serif;
+        }
+        #settingsPanel.is-macos {
+            padding-right: 24px;
+            padding-left: 24px;
+        }
+        #settingsPanel::before,
+        #settingsPanel::after {
+            position: absolute;
+            right: 0;
+            left: 0;
+            height: 12px;
+            content: "";
+            background: linear-gradient(180deg, #8c6237, #d2b477 40%, #9a7045);
+            box-shadow: 0 2px 4px #432b1770;
+        }
+        #settingsPanel::before { top: 0; }
+        #settingsPanel::after { bottom: 0; }
+        .settings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 48px;
+            margin: 0 0 14px;
+        }
+        #settingsPanel h2 {
+            margin: 0;
+            color: #4a2d17;
+            font-family: Georgia, "Noto Serif CJK TC", serif;
+            font-size: 22px;
+        }
+        #settingsPanel.is-macos .settings-header {
+            padding-left: 56px;
+        }
+        #settingsPanel:not(.is-macos) .settings-header {
+            padding-right: 42px;
+        }
+        .settings-window-control {
+            position: absolute;
+            top: 17px;
+            right: 17px;
+            display: grid;
+            width: 25px;
+            height: 25px;
+            place-items: center;
+            padding: 0;
+            color: #382719;
+            border: 1px solid #8e6335;
+            border-radius: 50%;
+            background: linear-gradient(#f3dfb2, #c8a36a);
+            box-shadow: 0 1px 3px #442a1470;
+            line-height: 1;
+        }
+        #settingsPanel.is-macos .settings-window-control {
+            right: auto;
+            left: 17px;
+        }
+        .settings-reset-button {
+            flex: 0 0 auto;
+            padding: 3px 10px;
+            color: #382719;
+            border: 1px solid #8e6335;
+            background: #e7d09e;
+            font-family: inherit;
+        }
+        #settingsPanel label,
+        #settingsPanel legend {
+            color: #382719;
+            font-weight: 600;
+        }
+        #settingsPanel .settings-notification-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        #settingsPanel .form-check-input {
+            border-color: #8e6335;
+        }
+        #settingsPanel .form-control,
+        #settingsPanel .form-select {
+            color: #2f2117;
+            border-color: #9c784a;
+            background-color: #f5e8c9dd;
+        }
+        #settingsPanel fieldset {
+            margin: 16px 0;
+            padding: 10px 12px 12px;
+            border: 1px solid #9c784a;
+            background: #f5e8c955;
+        }
+        #settingsPanel legend {
+            float: none;
+            width: auto;
+            margin: 0;
+            padding: 0 6px;
+            font-size: 15px;
+        }
+        .status-options {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px 12px;
+        }
+        .status-options label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 14px;
+            font-weight: 400 !important;
+        }
+        #settingsError {
+            margin-top: 8px;
+            color: #8b1d1d;
+            font-size: 13px;
+        }
+        @media (max-width: 480px) {
+            #settingsPanel {
+                right: -4px;
+                width: calc(100vw - 16px);
+                padding-right: 14px;
+                padding-left: 14px;
+            }
+            #settingsPanel.is-macos {
+                padding-left: 14px;
+            }
+            .status-options {
+                gap: 8px 6px;
+            }
+            .status-options label {
+                gap: 4px;
+                font-size: 12px;
+            }
+        }
+        [data-status-key][hidden] {
+            display: none !important;
+        }
+        .status-effects[hidden],
+        .status-combat[hidden] {
+            display: none !important;
+        }
+        body.theme-dark-fantasy .status-effects[hidden],
+        body.theme-dark-fantasy .status-combat[hidden] {
+            display: none !important;
         }
         .progress {
             height: 8px;
@@ -295,11 +437,6 @@
         .numpad-btn:active {
         background: rgba(0,0,0,0.2);
         }
-        .numpad-btn[style*="visibility:hidden"] {
-        background: none;
-        border: none;
-        pointer-events: none;
-        }
         @media (max-width: 768px) {
         .split-view #output-top {
             max-height: 0;
@@ -324,6 +461,473 @@
             border-left: none;
             border-top: 1px solid #333;
         }
+        }
+
+        body.theme-dark-fantasy {
+            --df-bg: #111318;
+            --df-surface: #181b21;
+            --df-panel: #20232b;
+            --df-elevated: #292d35;
+            --df-border: #49402f;
+            --df-border-soft: #332f28;
+            --df-text: #e6dfcf;
+            --df-secondary: #aaa393;
+            --df-muted: #777366;
+            --df-gold: #c5a15d;
+            --df-gold-highlight: #e0bd79;
+            --df-hp: #b94b4b;
+            --df-mana: #4778bd;
+            --df-move: #b58b43;
+            --df-success: #668b65;
+            --df-danger: #a94343;
+            --df-font-ui: "Segoe UI", "Noto Sans CJK TC", sans-serif;
+            --df-font-title: Georgia, "Noto Serif CJK TC", serif;
+            --df-font-game: "Noto Sans Mono CJK", "Cascadia Mono", Consolas, monospace;
+            background: var(--df-bg);
+            color: var(--df-text);
+            color-scheme: dark;
+            font-family: var(--df-font-ui);
+            font-size: 18px;
+            overflow: hidden;
+        }
+
+        body.theme-dark-fantasy .d-flex.flex-column.h-100 {
+            min-height: 0;
+        }
+
+        body.theme-dark-fantasy #output-container {
+            margin-right: 360px;
+            padding: 14px 16px 0;
+            background: var(--df-bg);
+            border-right: 1px solid var(--df-border-soft);
+        }
+
+        body.theme-dark-fantasy #output,
+        body.theme-dark-fantasy #output-top {
+            padding: 18px 22px;
+            background: var(--df-surface);
+            color: var(--df-text);
+            font-family: var(--df-font-game);
+            font-size: 16px;
+            line-height: 1.65;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            scrollbar-color: var(--df-border) var(--df-surface);
+        }
+
+        body.theme-dark-fantasy #output {
+            border: 1px solid var(--df-border-soft);
+            border-bottom: 0;
+            box-shadow: inset 0 1px 5px #0008;
+        }
+
+        body.theme-dark-fantasy #output-top {
+            color: var(--df-secondary);
+            border: 1px solid var(--df-border-soft);
+        }
+
+        body.theme-dark-fantasy .split-view #output-top {
+            border-bottom-color: var(--df-border);
+        }
+
+        body.theme-dark-fantasy .bottom-container {
+            width: calc(100vw - 360px - 24px);
+            gap: 8px;
+            padding: 0 12px 12px;
+            align-items: stretch;
+            box-sizing: border-box;
+            background: linear-gradient(180deg, transparent, var(--df-bg) 14px);
+        }
+
+        body.theme-dark-fantasy .left-panel,
+        body.theme-dark-fantasy #chatArea,
+        body.theme-dark-fantasy #statusBar,
+        body.theme-dark-fantasy #targetInfoBar,
+        body.theme-dark-fantasy #inputArea {
+            min-width: 0;
+            color: var(--df-text);
+            background: var(--df-panel) !important;
+            border: 1px solid var(--df-border);
+            box-shadow: inset 0 1px 0 #ffffff08, 0 4px 14px #0005;
+        }
+
+        body.theme-dark-fantasy #targetInfoBar {
+            min-height: 38px;
+            padding: 6px 12px;
+            gap: 5px;
+            font-family: var(--df-font-title);
+            font-size: 17px !important;
+        }
+
+        body.theme-dark-fantasy #targetInfoBar .target-icon,
+        body.theme-dark-fantasy #targetName,
+        body.theme-dark-fantasy #targetHp {
+            color: var(--df-hp) !important;
+        }
+
+        body.theme-dark-fantasy #targetInfoBar .target-arrow-icon,
+        body.theme-dark-fantasy #targetTargetName,
+        body.theme-dark-fantasy #targetTargetHp {
+            color: var(--df-gold-highlight) !important;
+        }
+
+        body.theme-dark-fantasy #statusBar {
+            gap: 8px 14px !important;
+            padding: 9px 12px;
+            border-top: 0;
+            flex: 1 1 auto;
+            align-content: center;
+        }
+
+        body.theme-dark-fantasy .status-hp,
+        body.theme-dark-fantasy .status-mana,
+        body.theme-dark-fantasy .status-move,
+        body.theme-dark-fantasy .status-level,
+        body.theme-dark-fantasy .status-gold,
+        body.theme-dark-fantasy .status-combat-stat {
+            color: var(--df-secondary);
+            align-items: center;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+
+        body.theme-dark-fantasy .status-combat {
+            display: flex !important;
+            flex-wrap: wrap;
+        }
+
+        body.theme-dark-fantasy .status-hp .status-icon { color: var(--df-hp); }
+        body.theme-dark-fantasy .status-mana .status-icon { color: var(--df-mana); }
+        body.theme-dark-fantasy .status-move .status-icon { color: var(--df-move); }
+        body.theme-dark-fantasy .status-level .status-icon,
+        body.theme-dark-fantasy .status-gold .status-icon { color: var(--df-gold); }
+        body.theme-dark-fantasy .status-combat-stat .status-icon { color: var(--df-gold-highlight); }
+
+        body.theme-dark-fantasy .fixed-width {
+            color: var(--df-text);
+            font-family: var(--df-font-game);
+            font-variant-numeric: tabular-nums;
+        }
+
+        body.theme-dark-fantasy .progress {
+            height: 5px;
+            margin: 4px 0 0;
+            overflow: hidden;
+            background: var(--df-bg);
+            border: 1px solid var(--df-border-soft);
+        }
+
+        body.theme-dark-fantasy .status-hp .progress-bar { background-color: var(--df-hp) !important; }
+        body.theme-dark-fantasy .status-mana .progress-bar { background-color: var(--df-mana) !important; }
+        body.theme-dark-fantasy .status-move .progress-bar { background-color: var(--df-move) !important; }
+
+        body.theme-dark-fantasy .status-effect {
+            padding: 3px 7px;
+            color: var(--df-muted);
+            background: var(--df-bg);
+            border: 1px solid var(--df-border-soft);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        body.theme-dark-fantasy .status-effect.poison.active {
+            color: var(--df-success);
+            border-color: var(--df-success);
+        }
+
+        body.theme-dark-fantasy .status-effect.burn.active,
+        body.theme-dark-fantasy .status-effect.bleed.active {
+            color: var(--df-hp);
+            border-color: var(--df-danger);
+        }
+
+        body.theme-dark-fantasy #inputArea {
+            gap: 8px !important;
+            padding: 8px;
+            border-top: 0;
+        }
+
+        body.theme-dark-fantasy #inputBox,
+        body.theme-dark-fantasy #themeColor {
+            min-height: 38px;
+            color: var(--df-text);
+            background-color: var(--df-bg);
+            border: 1px solid var(--df-border);
+            border-radius: 2px;
+            font-family: var(--df-font-game);
+            font-size: 18px;
+            box-shadow: inset 0 1px 4px #0008;
+        }
+
+        body.theme-dark-fantasy #inputBox::placeholder {
+            color: var(--df-muted);
+        }
+
+        body.theme-dark-fantasy #inputBox:focus,
+        body.theme-dark-fantasy #themeColor:focus {
+            border-color: var(--df-gold);
+            box-shadow: 0 0 0 2px #c5a15d33, inset 0 1px 4px #0008;
+        }
+
+        body.theme-dark-fantasy #themeSelector {
+            color: var(--df-text);
+            background: var(--df-elevated);
+            border-color: var(--df-border);
+        }
+
+        body.theme-dark-fantasy .btn,
+        body.theme-dark-fantasy .tab-btn,
+        body.theme-dark-fantasy .numpad-btn {
+            color: var(--df-text);
+            background: var(--df-elevated);
+            border: 1px solid var(--df-border);
+            border-radius: 2px;
+            font-family: var(--df-font-ui);
+            font-size: 18px;
+            transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+        }
+
+        body.theme-dark-fantasy #sendButton {
+            min-height: 38px;
+            color: #17140e;
+            background: var(--df-gold);
+            border-color: var(--df-gold-highlight);
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        body.theme-dark-fantasy #sendButton:hover,
+        body.theme-dark-fantasy #sendButton:focus-visible {
+            background: var(--df-gold-highlight);
+        }
+
+        body.theme-dark-fantasy .btn:hover,
+        body.theme-dark-fantasy .tab-btn:hover,
+        body.theme-dark-fantasy .numpad-btn:hover {
+            color: var(--df-gold-highlight);
+            background: #34332f;
+            border-color: var(--df-gold);
+        }
+
+        body.theme-dark-fantasy .btn:active,
+        body.theme-dark-fantasy .tab-btn:active,
+        body.theme-dark-fantasy .numpad-btn:active {
+            background: #121419;
+            box-shadow: inset 0 2px 5px #0009;
+        }
+
+        body.theme-dark-fantasy .btn:disabled,
+        body.theme-dark-fantasy .tab-btn:disabled,
+        body.theme-dark-fantasy .numpad-btn:disabled {
+            color: var(--df-muted);
+            background: var(--df-surface);
+            border-color: var(--df-border-soft);
+            cursor: not-allowed;
+        }
+
+        body.theme-dark-fantasy :focus-visible {
+            outline: 2px solid var(--df-gold-highlight);
+            outline-offset: 2px;
+        }
+
+        body.theme-dark-fantasy #chatArea {
+            padding: 12px;
+            color: var(--df-secondary);
+            font-family: var(--df-font-game);
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+            border-left: 1px solid var(--df-border);
+            scrollbar-color: var(--df-border) var(--df-panel);
+        }
+
+        body.theme-dark-fantasy #chatArea p {
+            margin: 0 0 8px;
+            padding-left: 9px;
+            border-left: 2px solid var(--df-border);
+        }
+
+        body.theme-dark-fantasy .right-panel {
+            display: flex;
+            width: 360px;
+            gap: 10px;
+            padding: 14px;
+            color: var(--df-text);
+            background: var(--df-surface);
+            border-left: 1px solid var(--df-border);
+            box-shadow: -8px 0 24px #0005;
+        }
+
+        body.theme-dark-fantasy .tab-buttons {
+            gap: 6px;
+            margin: 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--df-border);
+        }
+
+        body.theme-dark-fantasy .tab-btn {
+            min-height: 38px;
+            color: var(--df-secondary);
+            background: var(--df-panel);
+            font-family: var(--df-font-title);
+            font-size: 16px;
+        }
+
+        body.theme-dark-fantasy .tab-btn.active {
+            color: var(--df-gold-highlight);
+            background: var(--df-elevated);
+            border-color: var(--df-gold);
+            border-bottom: 2px solid var(--df-gold);
+        }
+
+        body.theme-dark-fantasy .equipment-panel,
+        body.theme-dark-fantasy .inventory-panel {
+            padding: 8px;
+            background: var(--df-panel);
+            border: 1px solid var(--df-border-soft);
+            border-radius: 0;
+        }
+
+        body.theme-dark-fantasy .equipment-list,
+        body.theme-dark-fantasy .inventory-list {
+            height: calc(100vh - 105px);
+            padding: 8px;
+            color: var(--df-text);
+            font-family: var(--df-font-game);
+            font-size: 14px;
+            line-height: 1.65;
+            overflow-wrap: anywhere;
+            scrollbar-color: var(--df-border) var(--df-panel);
+        }
+
+        body.theme-dark-fantasy .mobile-numpad {
+            opacity: 1;
+            padding: 5px;
+            background: #181b21d9;
+            border: 1px solid var(--df-border);
+        }
+
+        body.theme-dark-fantasy .numpad-row {
+            gap: 3px;
+        }
+
+        body.theme-dark-fantasy .numpad-btn {
+            width: 42px;
+            height: 42px;
+            color: var(--df-gold-highlight);
+            background: #20232bdd;
+            font-size: 16px;
+        }
+
+        body.theme-dark-fantasy #fleeBtn {
+            color: #f0d7d0;
+            border-color: var(--df-danger);
+        }
+
+        body.theme-dark-fantasy #invbtn {
+            color: var(--df-gold-highlight);
+        }
+
+        body.theme-dark-fantasy ::selection {
+            color: var(--df-bg);
+            background: var(--df-gold);
+        }
+
+        body.theme-dark-fantasy ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        body.theme-dark-fantasy ::-webkit-scrollbar-track {
+            background: var(--df-bg);
+        }
+
+        body.theme-dark-fantasy ::-webkit-scrollbar-thumb {
+            background: var(--df-border);
+            border: 2px solid var(--df-bg);
+        }
+
+        @media (max-width: 1100px) {
+            body.theme-dark-fantasy #output-container {
+                margin-right: 0;
+            }
+
+            body.theme-dark-fantasy .right-panel {
+                display: none;
+            }
+
+            body.theme-dark-fantasy .bottom-container {
+                width: 100vw;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body.theme-dark-fantasy #output-container {
+                padding: 8px 8px 0;
+            }
+
+            body.theme-dark-fantasy .mobile-numpad {
+                position: fixed;
+                top: auto;
+                right: 8px;
+                bottom: calc(var(--mobile-bottom-height, 40vh) + 8px);
+                transform: none;
+                z-index: 1001;
+            }
+
+            body.theme-dark-fantasy #output,
+            body.theme-dark-fantasy #output-top {
+                padding: 12px;
+                font-size: 15px;
+            }
+
+            body.theme-dark-fantasy .bottom-container {
+                gap: 6px;
+                padding: 0 8px 8px;
+            }
+
+            body.theme-dark-fantasy .left-panel,
+            body.theme-dark-fantasy #chatArea {
+                width: 100%;
+                flex: 0 0 auto;
+            }
+
+            body.theme-dark-fantasy #statusBar {
+                gap: 7px 10px !important;
+                padding: 8px;
+                flex-wrap: wrap !important;
+            }
+
+            body.theme-dark-fantasy .status-effects {
+                display: flex !important;
+                flex-wrap: wrap;
+                gap: 4px !important;
+            }
+
+            body.theme-dark-fantasy .status-label {
+                display: inline !important;
+            }
+
+            body.theme-dark-fantasy #inputArea {
+                flex-wrap: wrap;
+            }
+
+            body.theme-dark-fantasy #inputBox {
+                flex: 1 1 45%;
+            }
+
+            body.theme-dark-fantasy #chatArea {
+                border-left: 1px solid var(--df-border);
+                border-top: 1px solid var(--df-border);
+            }
+        }
+
+        @media (max-width: 420px) {
+            body.theme-dark-fantasy .status-hp,
+            body.theme-dark-fantasy .status-mana,
+            body.theme-dark-fantasy .status-move {
+                flex: 1 1 30%;
+            }
         }
     </style>
 </head>
@@ -363,100 +967,124 @@
                     <span id="targetTargetHp" style="color:#ffe066"></span>
                 </div>
                 <div id="statusBar" class="d-flex flex-wrap align-items-center gap-3">
-                    <div class="status-hp">
-                        <span class="status-label"><i class="fas fa-heart status-icon"></i>HP:</span><span id="currentHp" class="fixed-width hp-width">0</span>/<span id="maxHp" class="fixed-width hp-width">0</span>
+                    <div class="status-hp" data-status-key="hp">
+                        <span class="status-label"><i class="fas fa-heart status-icon"></i>生命:</span><span id="currentHp" class="fixed-width hp-width">0</span>/<span id="maxHp" class="fixed-width hp-width">0</span>
                         <div class="progress">
                             <div class="progress-bar bg-danger" role="progressbar" style="width: 0%"></div>
                         </div>
                     </div>
-                    <div class="status-mana">
-                        <span class="status-label"><i class="fas fa-magic status-icon"></i>Mana:</span><span id="currentMana" class="fixed-width mana-width">0</span>/<span id="maxMana" class="fixed-width mana-width">0</span>
+                    <div class="status-mana" data-status-key="mana">
+                        <span class="status-label"><i class="fas fa-magic status-icon"></i>法力:</span><span id="currentMana" class="fixed-width mana-width">0</span>/<span id="maxMana" class="fixed-width mana-width">0</span>
                         <div class="progress">
                             <div class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
                         </div>
                     </div>
-                    <div class="status-move">
-                        <span class="status-label"><i class="fas fa-walking status-icon"></i>Move:</span><span id="currentMove" class="fixed-width move-width">0</span>/<span id="maxMove" class="fixed-width move-width">0</span>
+                    <div class="status-move" data-status-key="move">
+                        <span class="status-label"><i class="fas fa-walking status-icon"></i>移動:</span><span id="currentMove" class="fixed-width move-width">0</span>/<span id="maxMove" class="fixed-width move-width">0</span>
                         <div class="progress">
                             <div class="progress-bar bg-warning" role="progressbar" style="width: 0%"></div>
                         </div>
                     </div>
 
-                    <div class="status-level d-none d-lg-flex max-level-hide">
+                    <div class="status-level" data-status-key="level">
                         <i class="fas fa-level-up-alt status-icon"></i>等級: <span id="level" class="fixed-width">0</span>
                     </div>
-                    <div class="status-exp d-none d-xl-flex max-level-hide">
-                        <i class="fas fa-star status-icon"></i>經驗: <span id="exp" class="fixed-width">0%</span>
-                    </div>
-                    
                     <div class="status-effects d-flex gap-3">
-                        <span class="status-effect poison">
+                        <span class="status-effect poison" data-status-key="poison">
                             <i class="fas fa-skull-crossbones status-icon"></i>中毒
                         </span>
-                        <span class="status-effect burn">
+                        <span class="status-effect burn" data-status-key="burn">
                             <i class="fas fa-fire status-icon"></i>灼傷
                         </span>
-                        <span class="status-effect bleed">
+                        <span class="status-effect bleed" data-status-key="bleed">
                             <i class="fas fa-tint status-icon"></i>流血
                         </span>
                     </div>
-                    <div class="status-gold d-none d-lg-flex">
-                        <i class="fas fa-coins status-icon"></i>金: <span id="gold" class="fixed-width">0</span>
+                    <div class="status-gold" data-status-key="gold">
+                        <i class="fas fa-coins status-icon"></i>金幣: <span id="gold" class="fixed-width">0</span>
                     </div>
-                    <div class="status-gold d-none d-lg-flex">
-                        食: <span id="hungry" class="fixed-width">0</span>
+                    <div class="status-gold" data-status-key="food">
+                        飽食: <span id="hungry" class="fixed-width">0</span>
                     </div>
-                    <div class="status-gold d-none d-lg-flex">
-                        水: <span id="thirsty" class="fixed-width">0</span>
+                    <div class="status-gold" data-status-key="drink">
+                        口渴: <span id="thirsty" class="fixed-width">0</span>
                     </div>
-                    <!-- <div class="status-attributes d-flex gap-3 d-none d-xl-flex">
-                        
-                    </div> -->
-                    <div class="status-combat d-flex gap-3 d-none d-xxl-flex">
-                        <!--
-                        <span class="status-attr">
-                            <i class="fas fa-fist-raised status-icon"></i>力: <span id="str" class="fixed-width">0</span>
-                        </span>
-                        <span class="status-attr">
-                            <i class="fas fa-brain status-icon"></i>智: <span id="int" class="fixed-width">0</span>
-                        </span>
-                        <span class="status-attr">
-                            <i class="fas fa-book status-icon"></i>學: <span id="wis" class="fixed-width">0</span>
-                        </span>
-                        <span class="status-attr">
-                            <i class="fas fa-running status-icon"></i>敏: <span id="dex" class="fixed-width">0</span>
-                        </span>
-                        <span class="status-attr">
-                            <i class="fas fa-shield-alt status-icon"></i>體: <span id="con" class="fixed-width">0</span>
-                        </span>
-                        -->
-                        <span class="status-combat-stat">
+                    <div class="status-combat d-flex gap-3">
+                        <span class="status-combat-stat" data-status-key="armor">
                             <i class="fas fa-shield-alt status-icon"></i>護甲: <span id="armor" class="fixed-width">0</span>
                         </span>
-                        <span class="status-combat-stat">
+                        <span class="status-combat-stat" data-status-key="damroll">
                             <i class="fas fa-meteor status-icon"></i>傷害: <span id="damroll" class="fixed-width">0</span>
                         </span>
-                        <span class="status-combat-stat">
+                        <span class="status-combat-stat" data-status-key="hitroll">
                             <i class="fas fa-crosshairs status-icon"></i>命中: <span id="hitRate" class="fixed-width">0</span>
                         </span>
+                        <span class="status-combat-stat" data-status-key="str">力: <span id="str" class="fixed-width">0</span></span>
+                        <span class="status-combat-stat" data-status-key="int">智: <span id="int" class="fixed-width">0</span></span>
+                        <span class="status-combat-stat" data-status-key="dex">敏: <span id="dex" class="fixed-width">0</span></span>
+                        <span class="status-combat-stat" data-status-key="wis">學識: <span id="wis" class="fixed-width">0</span></span>
+                        <span class="status-combat-stat" data-status-key="con">體: <span id="con" class="fixed-width">0</span></span>
                     </div>
                     
                 </div>
                 <div id="inputArea" class="d-flex align-items-center gap-2">
                     <input type="text" id="inputBox" class="form-control" placeholder="輸入指令..." autofocus spellcheck="false" autocomplete="off">
                     <button id="sendButton" class="btn btn-primary">發送</button>
-                <div id="themeSelector" class="d-flex align-items-center gap-2">
-                    <label for="themeColor" class="form-label mb-0">Theme:</label>
-                    <select id="themeColor" class="form-select w-auto">
-                        <option value="green" selected>綠</option>
-                        <option value="white">白</option>
-                    </select>
-                </div>
+                    <button id="themeSelector" class="btn btn-secondary" type="button"
+                        aria-label="開啟設定" aria-expanded="false" aria-controls="settingsPanel">
+                        <i class="fas fa-cog" aria-hidden="true"></i>
+                    </button>
+                    <section id="settingsPanel" hidden aria-label="遊戲設定">
+                        <button id="settingsClose" class="settings-window-control" type="button"
+                            aria-label="關閉設定">×</button>
+                        <div class="settings-header">
+                            <h2>冒險者設定</h2>
+                            <button id="settingsReset" class="settings-reset-button" type="button">預設</button>
+                        </div>
+                        <label class="form-label" for="savedAccount">帳號</label>
+                        <input id="savedAccount" class="form-control" type="text"
+                            autocomplete="username" maxlength="10">
+                        <label class="form-label mt-2" for="savedPassword">密碼</label>
+                        <input id="savedPassword" class="form-control" type="password"
+                            autocomplete="current-password" maxlength="10">
+                        <label class="settings-notification-option">
+                            <input id="chatNotificationSetting" class="form-check-input m-0" type="checkbox">
+                            訊息提醒
+                        </label>
+                        <fieldset>
+                            <legend>狀態列顯示</legend>
+                            <div class="status-options">
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="hp">生命</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="mana">法力</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="move">體力</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="gold">金幣</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="food">飽食</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="drink">口渴</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="armor">護甲</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="damroll">傷害</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="hitroll">命中</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="str">力量</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="int">智力</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="dex">敏捷</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="wis">學識</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="con">體質</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="poison">中毒</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="burn">灼傷</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="bleed">流血</label>
+                                <label><input class="form-check-input m-0" type="checkbox" data-status-setting="level">等級</label>
+                            </div>
+                        </fieldset>
+                        <label class="form-label" for="themeColor">主題</label>
+                        <select id="themeColor" class="form-select">
+                            <option value="green">綠</option>
+                            <option value="white">白</option>
+                            <option value="dark-fantasy">暗黑奇幻</option>
+                        </select>
+                        <div id="settingsError" role="status" aria-live="polite"></div>
+                    </section>
                 </div>
             </div>
-            <div id="chatArea">
-                <div id="chatContent"></div>
-            </div>
+            <div id="chatArea"></div>
         </div>
     </div>
 
@@ -474,8 +1102,6 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const SERVER_URL = 'wss://wssmo.myctw.cc:443'; // MUD伺服器地址
         const outputContainer = document.getElementById('output-container');
@@ -487,7 +1113,6 @@
         const invbtn = document.getElementById('invbtn');
         const localStorageTag = 'marsII'
         const localStorageExpiredSecond = '5'
-        const localStorageMulti = 'multi'
         const MAX_CHAT_LINES = 7;
         const MAX_OUTPUT_LINES = 200; // 最大輸出行數
         const MAX_COMMAND_HISTORY = 10; // 最大命令歷史記錄數
@@ -495,9 +1120,9 @@
         let isSplitting = false;
         let isUserScrolling = false;
         let scrollTimer;
-        let autoScroll = true;
-
         let ws;
+        let inputMode = null;
+        let autoLoginStage = 'account';
         let inactivityTimer;
         let commandHistory = []; // 儲存命令歷史
         let currentHistoryIndex = -1; // 當前歷史記錄索引
@@ -619,17 +1244,18 @@
                 }
             });
             
-            // 定義要監聽的按鈕字母
-            const btns = ['N', 'U', 'W', 'L', 'E', 'S', 'D'];
-            btns.forEach(letter => {
-                document.querySelectorAll('.numpad-btn').forEach(btn => {
-                    if (btn.textContent === letter) {
-                        btn.addEventListener('click', function() {
-                            // 送出對應小寫字母
-                            sendNumpadMessage(letter.toLowerCase());
-                        });
-                    }
-                });
+            const numpadCommands = {
+                N: 'north',
+                U: 'up',
+                W: 'west',
+                L: 'look',
+                E: 'east',
+                S: 'south',
+                D: 'down'
+            };
+            document.querySelectorAll('.numpad-btn').forEach(button => {
+                const command = numpadCommands[button.textContent];
+                if (command) button.addEventListener('click', () => sendNumpadMessage(command));
             });
         });
         fleeBtn.addEventListener('click', function() {
@@ -639,18 +1265,8 @@
             sendNumpadMessage('inv');
         });
 
-        // 這個 function 會模擬和 sendButton 一樣的送出行為
         function sendNumpadMessage(msg) {
-            // 假設原本 sendButton 的 click 事件會呼叫 sendMessage(msg)
-            // 你可以直接呼叫 sendMessage(msg)
-            if (typeof sendMessage === 'function') {
-                sendMessage(msg);
-            } else {
-                // 或者模擬 inputBox 輸入並觸發 sendButton
-                const inputBox = document.getElementById('inputBox');
-                inputBox.value = msg;
-                document.getElementById('sendButton').click();
-            }
+            sendMessage(msg);
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -675,92 +1291,383 @@
                 equipmentPanel.classList.add('active');
                 inventoryPanel.classList.remove('active');
             });
-
-            // Set chatArea height dynamically
-            function setChatAreaHeight() {
-                const inputArea = document.getElementById('inputArea');
-                const statusBar = document.getElementById('statusBar');
-                const targetInfoBar = document.getElementById('targetInfoBar');
-                const chatArea = document.getElementById('chatArea');
-                const bottomContainer = document.querySelector('.bottom-container');
-                const outputContainer = document.getElementById('output-container');
-                const isMobileLayout = window.matchMedia('(max-width: 768px)').matches;
-                
-                const inputHeight = inputArea.offsetHeight;
-                const statusHeight = statusBar.offsetHeight;
-                const targetInfoHeight = targetInfoBar.offsetHeight;
-                const chatHeight = (inputHeight) + (statusHeight) + (targetInfoHeight);
-                const leftPanelHeight = inputHeight + statusHeight + targetInfoHeight;
-                const bottomHeight = isMobileLayout
-                    ? leftPanelHeight + chatHeight
-                    : Math.max(leftPanelHeight, chatHeight);
-                
-                chatArea.style.height = `${chatHeight}px`;
-                bottomContainer.style.height = `${bottomHeight}px`;
-                outputContainer.style.marginBottom = `${bottomHeight}px`;
-            }
-
-            // Set initial height and update on resize
-            setChatAreaHeight();
-            window.addEventListener('resize', setChatAreaHeight);
-
-            const outputElement = document.getElementById('output');
-            const themeSelector = document.getElementById('themeColor');
-            const STORAGE_KEY = 'terminalThemeColor'; // Local Storage 的鍵名
-
-            // 定義選項對應的實際顏色值
-            const themes = {
-                'green': 'green',
-                'white': 'rgb(255, 255, 255)' 
-            };
-
-            /**
-             * 應用指定主題到 #output 元素和 themeSelector 下拉選單。
-             * @param {string} themeKey - 主題的鍵 ('green' 或 'white')
-             */
-            function applyTheme(themeKey) {
-                // 1. 改變 #output 的顏色
-                outputElement.style.color = themes[themeKey];
-                
-                // 2. 設置下拉選單的選中項，使其與當前應用主題保持一致
-                themeSelector.value = themeKey;
-            }
-
-            // =========================================================
-            // A. 網頁啟動時：檢查 Local Storage 並應用主題
-            // =========================================================
-            
-            // 嘗試從 Local Storage 讀取上次儲存的值
-            const storedTheme = localStorage.getItem(STORAGE_KEY);
-            
-            if (storedTheme && themes.hasOwnProperty(storedTheme)) {
-                // 如果 Local Storage 中有有效的值，就應用它
-                applyTheme(storedTheme);
-                console.log(`頁面啟動：已從 Local Storage 讀取主題: ${storedTheme}`);
-            } else {
-                // 如果是首次載入或 Local Storage 無效，應用預設值 ('green')
-                applyTheme('green');
-                console.log("頁面啟動：未找到儲存的主題，應用預設主題: green");
-            }
-
-            // =========================================================
-            // B. 選單變動時：應用主題並儲存到 Local Storage
-            // =========================================================
-
-            themeSelector.addEventListener('change', function() {
-                const selectedValue = this.value; 
-                
-                // 1. 應用新主題
-                applyTheme(selectedValue);
-                
-                // 2. 將新主題儲存到 Local Storage
-                localStorage.setItem(STORAGE_KEY, selectedValue);
-                console.log(`使用者操作：主題已儲存為: ${selectedValue}`);
-            });
         });
+
+        function setChatAreaHeight() {
+            const inputArea = document.getElementById('inputArea');
+            const statusBar = document.getElementById('statusBar');
+            const targetInfoBar = document.getElementById('targetInfoBar');
+            const chatArea = document.getElementById('chatArea');
+            const bottomContainer = document.querySelector('.bottom-container');
+            const outputContainer = document.getElementById('output-container');
+            const leftPanel = document.querySelector('.left-panel');
+            const isMobileLayout = window.matchMedia('(max-width: 768px)').matches;
+            const inputHeight = inputArea.offsetHeight;
+            const statusHeight = statusBar.offsetHeight;
+            const targetInfoHeight = targetInfoBar.offsetHeight;
+            const chatHeight = inputHeight + statusHeight + targetInfoHeight;
+            const leftPanelHeight = Math.max(
+                chatHeight,
+                leftPanel.scrollHeight
+            );
+            const containerStyles = getComputedStyle(bottomContainer);
+            const verticalPadding = parseFloat(containerStyles.paddingTop)
+                + parseFloat(containerStyles.paddingBottom);
+            const verticalGap = isMobileLayout ? parseFloat(containerStyles.rowGap) : 0;
+            const bottomHeight = isMobileLayout
+                ? leftPanelHeight + chatHeight + verticalGap + verticalPadding
+                : Math.max(leftPanelHeight, chatHeight) + verticalPadding;
+
+            document.body.style.setProperty('--mobile-bottom-height', `${bottomHeight}px`);
+            chatArea.style.height = `${chatHeight}px`;
+            bottomContainer.style.height = `${bottomHeight}px`;
+            outputContainer.style.marginBottom = `${bottomHeight}px`;
+        }
+
+        const SETTINGS_STORAGE_KEY = 'marsII.clientSettings';
+        const LEGACY_THEME_STORAGE_KEY = 'terminalThemeColor';
+        const STATUS_KEYS = [
+            'hp', 'mana', 'move', 'gold', 'food', 'drink', 'armor', 'damroll',
+            'hitroll', 'str', 'int', 'dex', 'wis', 'con', 'poison', 'burn',
+            'bleed', 'level'
+        ];
+        const THEMES = {
+            green: 'green',
+            white: 'rgb(255, 255, 255)',
+            'dark-fantasy': null
+        };
+        let currentSettings = {
+            account: '',
+            password: '',
+            notifyChat: false,
+            status: Object.fromEntries(STATUS_KEYS.map(key => [key, true])),
+            theme: 'green'
+        };
+        let settingsSaveTimer;
+        let settingsSaveChain = Promise.resolve();
+        let encryptedSavedPassword = null;
+        let passwordChanged = false;
+
+        function showSettingsError(message) {
+            const errorElement = document.getElementById('settingsError');
+            if (errorElement) errorElement.textContent = message;
+            console.error(message);
+        }
+
+        function applyTheme(themeKey) {
+            const selectedTheme = Object.hasOwn(THEMES, themeKey) ? themeKey : 'green';
+            document.body.classList.toggle('theme-dark-fantasy', selectedTheme === 'dark-fantasy');
+            document.getElementById('output').style.color = THEMES[selectedTheme] || '';
+            document.getElementById('themeColor').value = selectedTheme;
+            currentSettings.theme = selectedTheme;
+            window.requestAnimationFrame(setChatAreaHeight);
+        }
+
+        function applyStatusSettings() {
+            STATUS_KEYS.forEach(key => {
+                const checkbox = document.querySelector(`[data-status-setting="${key}"]`);
+                const statusElement = document.querySelector(`[data-status-key="${key}"]`);
+                const isVisible = checkbox.checked;
+                currentSettings.status[key] = isVisible;
+                statusElement.hidden = !isVisible;
+            });
+
+            document.querySelector('.status-effects').hidden = !['poison', 'burn', 'bleed']
+                .some(key => currentSettings.status[key]);
+            document.querySelector('.status-combat').hidden = ![
+                'armor', 'damroll', 'hitroll', 'str', 'int', 'dex', 'wis', 'con'
+            ].some(key => currentSettings.status[key]);
+            window.requestAnimationFrame(setChatAreaHeight);
+        }
+
+        function openSettingsDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('marsII-settings', 1);
+                request.onupgradeneeded = () => {
+                    request.result.createObjectStore('keys');
+                };
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+
+        async function getCredentialKey(createIfMissing) {
+            const database = await openSettingsDatabase();
+            const existingKey = await new Promise((resolve, reject) => {
+                const transaction = database.transaction('keys', 'readonly');
+                const request = transaction.objectStore('keys').get('credentials');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+            if (existingKey || !createIfMissing) {
+                database.close();
+                return existingKey;
+            }
+
+            const key = await window.crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt', 'decrypt']
+            );
+            await new Promise((resolve, reject) => {
+                const transaction = database.transaction('keys', 'readwrite');
+                transaction.objectStore('keys').put(key, 'credentials');
+                transaction.oncomplete = resolve;
+                transaction.onerror = () => reject(transaction.error);
+                transaction.onabort = () => reject(transaction.error);
+            });
+            database.close();
+            return key;
+        }
+
+        function bytesToBase64(bytes) {
+            return btoa(String.fromCharCode(...new Uint8Array(bytes)));
+        }
+
+        function base64ToBytes(value) {
+            return Uint8Array.from(atob(value), character => character.charCodeAt(0));
+        }
+
+        async function encryptPassword(password) {
+            if (!password) return null;
+            if (!window.crypto?.subtle || !window.indexedDB) {
+                throw new Error('此瀏覽器不支援安全的密碼儲存，密碼未被保存。');
+            }
+            const key = await getCredentialKey(true);
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            const ciphertext = await window.crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv },
+                key,
+                new TextEncoder().encode(password)
+            );
+            return {
+                iv: bytesToBase64(iv),
+                ciphertext: bytesToBase64(ciphertext)
+            };
+        }
+
+        async function decryptPassword(encryptedPassword) {
+            if (!window.crypto?.subtle || !window.indexedDB) {
+                throw new Error('此瀏覽器不支援解密已儲存的密碼。');
+            }
+            const key = await getCredentialKey(false);
+            if (!key) throw new Error('找不到密碼解密金鑰，請重新輸入密碼。');
+            const plaintext = await window.crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: base64ToBytes(encryptedPassword.iv) },
+                key,
+                base64ToBytes(encryptedPassword.ciphertext)
+            );
+            return new TextDecoder().decode(plaintext);
+        }
+
+        function queueSettingsSave() {
+            clearTimeout(settingsSaveTimer);
+            settingsSaveTimer = setTimeout(() => {
+                settingsSaveChain = settingsSaveChain
+                    .then(async () => {
+                        const passwordInput = document.getElementById('savedPassword');
+                        const passwordToSave = passwordInput.value;
+                        const shouldSavePassword = passwordChanged;
+                        const encryptedPassword = shouldSavePassword
+                            ? await encryptPassword(passwordToSave)
+                            : encryptedSavedPassword;
+                        const settings = {
+                            account: document.getElementById('savedAccount').value.trim(),
+                            password: encryptedPassword,
+                            notifyChat: document.getElementById('chatNotificationSetting').checked,
+                            status: { ...currentSettings.status },
+                            theme: document.getElementById('themeColor').value
+                        };
+                        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+                        currentSettings.account = settings.account;
+                        currentSettings.notifyChat = settings.notifyChat;
+                        encryptedSavedPassword = encryptedPassword;
+                        if (shouldSavePassword && passwordInput.value === passwordToSave) {
+                            currentSettings.password = passwordToSave;
+                            passwordChanged = false;
+                        }
+                        currentSettings.theme = settings.theme;
+                        const errorElement = document.getElementById('settingsError');
+                        errorElement.textContent = '';
+                        applyTheme(settings.theme);
+                        if (shouldSavePassword && passwordInput.value !== passwordToSave) {
+                            queueSettingsSave();
+                        }
+                    })
+                    .catch(error => {
+                        showSettingsError(`設定儲存失敗：${error.message}`);
+                    });
+            }, 180);
+        }
+
+        async function initializeSettings() {
+            const accountInput = document.getElementById('savedAccount');
+            const passwordInput = document.getElementById('savedPassword');
+            const chatNotificationSetting = document.getElementById('chatNotificationSetting');
+            const themeSelect = document.getElementById('themeColor');
+            STATUS_KEYS.forEach(key => {
+                document.querySelector(`[data-status-setting="${key}"]`).checked =
+                    currentSettings.status[key];
+            });
+            let storedSettings = null;
+            try {
+                const serializedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
+                storedSettings = serializedSettings ? JSON.parse(serializedSettings) : null;
+            } catch (error) {
+                showSettingsError(`無法讀取已儲存的設定：${error.message}`);
+            }
+
+            if (storedSettings && typeof storedSettings === 'object') {
+                currentSettings.account = typeof storedSettings.account === 'string'
+                    ? storedSettings.account
+                    : '';
+                currentSettings.notifyChat = storedSettings.notifyChat === true;
+                chatNotificationSetting.checked = currentSettings.notifyChat;
+                currentSettings.status = Object.fromEntries(STATUS_KEYS.map(key => [
+                    key,
+                    typeof storedSettings.status?.[key] === 'boolean'
+                        ? storedSettings.status[key]
+                        : true
+                ]));
+                accountInput.value = currentSettings.account;
+                STATUS_KEYS.forEach(key => {
+                    document.querySelector(`[data-status-setting="${key}"]`).checked =
+                        currentSettings.status[key];
+                });
+                applyTheme(storedSettings.theme);
+                if (storedSettings.password) {
+                    encryptedSavedPassword = storedSettings.password;
+                    try {
+                        passwordInput.value = await decryptPassword(storedSettings.password);
+                        currentSettings.password = passwordInput.value;
+                    } catch (error) {
+                        showSettingsError(`無法解密已儲存的密碼：${error.message}`);
+                    }
+                }
+            } else {
+                const legacyTheme = localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+                applyTheme(legacyTheme);
+            }
+            applyStatusSettings();
+
+            accountInput.addEventListener('input', queueSettingsSave);
+            passwordInput.addEventListener('input', () => {
+                passwordChanged = true;
+                queueSettingsSave();
+            });
+            chatNotificationSetting.addEventListener('change', async () => {
+                if (!chatNotificationSetting.checked) {
+                    currentSettings.notifyChat = false;
+                    queueSettingsSave();
+                    return;
+                }
+
+                if (!('Notification' in window)) {
+                    chatNotificationSetting.checked = false;
+                    currentSettings.notifyChat = false;
+                    showSettingsError('此瀏覽器不支援桌面通知。');
+                    queueSettingsSave();
+                    return;
+                }
+
+                try {
+                    const permission = Notification.permission === 'default'
+                        ? await Notification.requestPermission()
+                        : Notification.permission;
+                    if (permission !== 'granted') {
+                        chatNotificationSetting.checked = false;
+                        currentSettings.notifyChat = false;
+                        showSettingsError('瀏覽器通知權限未開啟，訊息提醒已停用。');
+                    } else {
+                        currentSettings.notifyChat = true;
+                        document.getElementById('settingsError').textContent = '';
+                    }
+                    queueSettingsSave();
+                } catch (error) {
+                    chatNotificationSetting.checked = false;
+                    currentSettings.notifyChat = false;
+                    showSettingsError(`無法啟用瀏覽器通知：${error.message}`);
+                    queueSettingsSave();
+                }
+            });
+            document.querySelectorAll('[data-status-setting]').forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    applyStatusSettings();
+                    queueSettingsSave();
+                });
+            });
+            themeSelect.addEventListener('change', () => {
+                applyTheme(themeSelect.value);
+                queueSettingsSave();
+            });
+        }
+
+        const settingsReady = initializeSettings().catch(error => {
+            showSettingsError(`設定初始化失敗：${error.message}`);
+        });
+
+        const settingsButton = document.getElementById('themeSelector');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const platformName = navigator.userAgentData?.platform || navigator.platform || '';
+        settingsPanel.classList.toggle('is-macos', /mac/i.test(platformName));
+        settingsButton.addEventListener('click', () => {
+            const shouldOpen = settingsPanel.hidden;
+            settingsPanel.hidden = !shouldOpen;
+            settingsButton.setAttribute('aria-expanded', String(shouldOpen));
+        });
+        function closeSettingsPanel() {
+            settingsPanel.hidden = true;
+            settingsButton.setAttribute('aria-expanded', 'false');
+        }
+        document.getElementById('settingsClose').addEventListener('click', closeSettingsPanel);
+        document.getElementById('settingsReset').addEventListener('click', () => {
+            document.getElementById('savedAccount').value = '';
+            document.getElementById('savedPassword').value = '';
+            document.getElementById('chatNotificationSetting').checked = false;
+            currentSettings.notifyChat = false;
+            passwordChanged = true;
+            currentSettings.password = '';
+            STATUS_KEYS.forEach(key => {
+                document.querySelector(`[data-status-setting="${key}"]`).checked = true;
+            });
+            applyStatusSettings();
+            document.getElementById('themeColor').value = 'dark-fantasy';
+            applyTheme('dark-fantasy');
+            queueSettingsSave();
+        });
+        document.addEventListener('click', event => {
+            if (!settingsPanel.hidden
+                && !settingsPanel.contains(event.target)
+                && !settingsButton.contains(event.target)) {
+                closeSettingsPanel();
+            }
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !settingsPanel.hidden) {
+                closeSettingsPanel();
+                settingsButton.focus();
+            }
+        });
+        window.addEventListener('resize', setChatAreaHeight);
+        window.requestAnimationFrame(setChatAreaHeight);
 
         function updateChat(data) {
             chatArea.innerHTML += `<p>${data.msg}</p>`;
+            if (currentSettings.notifyChat && 'Notification' in window
+                && Notification.permission === 'granted') {
+                const message = chatArea.lastElementChild?.textContent?.trim();
+                if (message) {
+                    try {
+                        const notification = new Notification('Mars: Origin', {
+                            body: message,
+                            icon: './assets/images/MO_ICON2.png'
+                        });
+                        setTimeout(() => notification.close(), 8000);
+                    } catch (error) {
+                        console.error('無法顯示訊息通知:', error);
+                    }
+                }
+            }
             // 檢查並限制輸出行數
             while (chatArea.childNodes.length > MAX_CHAT_LINES) {
                 chatArea.removeChild(chatArea.firstChild);
@@ -770,9 +1677,9 @@
         // Status update handling
         function updateStatus(data) {
             // Update status effects
-            document.querySelector('.status-effect.poison').classList.toggle('active', data.status.poison);
-            document.querySelector('.status-effect.burn').classList.toggle('active', data.status.burn);
-            document.querySelector('.status-effect.bleed').classList.toggle('active', data.status.bleed);
+            document.querySelector('.status-effect.poison').classList.toggle('active', data.status?.poison);
+            document.querySelector('.status-effect.burn').classList.toggle('active', data.status?.burn);
+            document.querySelector('.status-effect.bleed').classList.toggle('active', data.status?.bleed);
 
             // Update Target Info Bar
             const targetName = data.target.targetName;
@@ -830,34 +1737,16 @@
 
             document.getElementById('level').textContent = String(data.level || 0);
 
-            const level = data.level || 0;
-            const expElement = document.querySelector('.status-exp');
-            const lvElement = document.querySelector('.status-level');
-            if (level >= 50) {
-                expElement.classList.add('max-level-hide');
-                lvElement.classList.add('max-level-hide');
-            } else {
-                expElement.classList.remove('max-level-hide');
-                lvElement.classList.remove('max-level-hide');
-                const exp = data.exp || 0;
-                const expCap = data.expCap || 1;
-                const expPercent = Math.floor((exp / expCap) * 100);
-                document.getElementById('exp').textContent = `${expPercent}%`;
-            }
-
             document.getElementById('gold').textContent = String(data.gold || 0);
             document.getElementById('thirsty').textContent = String(data.thirsty || 0)+'%';
             document.getElementById('hungry').textContent = String(data.hungry || 0)+'%';
-/*
-            document.getElementById('str').textContent = String(data.attributes.str || 0);
-            document.getElementById('int').textContent = String(data.attributes.int || 0);
-            document.getElementById('wis').textContent = String(data.attributes.wis || 0);
-            document.getElementById('dex').textContent = String(data.attributes.dex || 0);
-            document.getElementById('con').textContent = String(data.attributes.con || 0);
-*/
             document.getElementById('armor').textContent = String(data.combat.armor || 0);
             document.getElementById('damroll').textContent = String(data.combat.damroll || 0);
             document.getElementById('hitRate').textContent = String(data.combat.hitRate || 0);
+            const attributes = data.attributes || {};
+            ['str', 'int', 'dex', 'wis', 'con'].forEach(attribute => {
+                document.getElementById(attribute).textContent = String(attributes[attribute] || 0);
+            });
         }
 
         function updateEqInv(data) {
@@ -865,7 +1754,10 @@
             if (!data.eq) {
                 equipmentList.innerHTML = '無裝備';
             } else {
-                equipmentList.innerHTML = data.eq;
+                equipmentList.innerHTML = data.eq.replace(
+                    /(^|\n)(?:<span\b[^>]*>)?(?:\d+\/\d+|---\/---)(?:<\/span>)?[ \t]*/gi,
+                    '$1'
+                );
             }
 
             const inventoryList = document.getElementById('inventoryList');
@@ -877,9 +1769,12 @@
         }
 
         function connect() {
+            inputMode = null;
+            autoLoginStage = 'account';
             ws = new WebSocket(SERVER_URL);
             ws.onopen = () => {
                 setTag(); // 設置連線標記
+                /*outputDiv.innerHTML += '<span style="color: white;">Mars: Origin | 瑪爾斯群英傳: 起源</span>';*/
                 outputDiv.innerHTML +=
                     '<p><img src="https://marsorigin.myctw.cc/assets/images/logo.jpg" ' +
                     'alt="Mars: Origin" ' +
@@ -889,7 +1784,7 @@
                 logWs('OPEN', `url=${SERVER_URL}`);
             };
 
-            ws.onmessage = (event) => {
+            ws.onmessage = async (event) => {
                 
                 /*
                 let messageOrigin;
@@ -911,9 +1806,25 @@
                         updateEqInv(pData);
                     }else if (pData.type === 'chat') {
                         updateChat(pData);
+                    }else if (pData.type === 'mode') {
+                        inputMode = pData.mode || null;
                     }
                 
                 }else{
+                    await settingsReady;
+                    const serverMessage = String(event.data);
+                    if (autoLoginStage === 'account' && serverMessage.includes('請輸入您的帳號')) {
+                        if (currentSettings.account && currentSettings.password) {
+                            sendSavedCredential(currentSettings.account);
+                            autoLoginStage = 'password';
+                        } else {
+                            autoLoginStage = 'manual';
+                        }
+                    } else if (autoLoginStage === 'password'
+                        && serverMessage.includes('請輸入您的密碼')) {
+                        sendSavedCredential(currentSettings.password);
+                        autoLoginStage = 'sent';
+                    }
                     outputDiv.innerHTML += `<p>${event.data}</p>`;
                     // 檢查並限制輸出行數
                     while (outputDiv.childNodes.length > MAX_OUTPUT_LINES) {
@@ -924,8 +1835,6 @@
                 resetInactivityTimer(); // 重置非活動計時器
                 setTag(); // 設置連線標記
             };
-
-
 
             ws.onclose = () => {
                 logWs('CLOSE', {
@@ -950,7 +1859,7 @@
 
         function isJson(data) {
             try{
-                JSON.parse(event.data);
+                JSON.parse(data);
                 return true;
             }catch(e){
                 return false;
@@ -963,7 +1872,7 @@
             }
 
             if (message) {
-                ws.send(JSON.stringify(message));
+                ws.send(JSON.stringify({ command: message, mode: inputMode }));
                 outputDiv.innerHTML += '<span style="color: yellow;">'+message+'</span>\n';
                 
                 // 添加到命令歷史
@@ -979,6 +1888,14 @@
                 inputBox.select(); // 全选文本
                 resetInactivityTimer(); // 重置非活動計時器
             }
+        }
+
+        function sendSavedCredential(value) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+            ws.send(JSON.stringify({ command: value, mode: inputMode }));
+            inputBox.value = '';
+            resetInactivityTimer();
+            return true;
         }
 
         function resetInactivityTimer() {
@@ -999,6 +1916,7 @@
         }
 
         function disconnect() {
+            inputMode = null;
             if (ws) {
                 ws.close(); // 關閉WebSocket連接
                 ws = null; // 清空ws變數
@@ -1009,7 +1927,7 @@
         function setTag() {
             const now = new Date();
             const expiryTime = now.getTime() + localStorageExpiredSecond * 1000; // 計算過期時間
-            const item = { localStorageMulti: true, expiry: expiryTime };
+            const item = { expiry: expiryTime };
             localStorage.setItem(localStorageTag, JSON.stringify(item));
         }
 
@@ -1065,6 +1983,16 @@
                 return;
             }
 
+            if (
+                inputMode === 'blacksmith' &&
+                event.code.startsWith('Digit') &&
+                /^[0-9]$/.test(event.key)
+            ) {
+                sendMessage(event.key);
+                event.preventDefault();
+                return;
+            }
+
             if (event.code.startsWith('Numpad')) {
                 let cmd = '';
                 switch (event.code) {
@@ -1113,20 +2041,16 @@
             document.querySelector('.status-move .progress-bar').style.width = '0%';
 
             document.getElementById('level').textContent = '0';
-            document.getElementById('exp').textContent = '0%';
             document.getElementById('thirsty').textContent = '0%';
             document.getElementById('hungry').textContent = '0%';
             document.getElementById('gold').textContent = '0';
 
-            document.getElementById('str').textContent = '0';
-            document.getElementById('int').textContent = '0';
-            document.getElementById('wis').textContent = '0';
-            document.getElementById('dex').textContent = '0';
-            document.getElementById('con').textContent = '0';
-
             document.getElementById('armor').textContent = '0';
             document.getElementById('damroll').textContent = '0';
             document.getElementById('hitRate').textContent = '0';
+            ['str', 'int', 'dex', 'wis', 'con'].forEach(attribute => {
+                document.getElementById(attribute).textContent = '0';
+            });
         }
 
         const eqArea = document.getElementById('equipmentList');
