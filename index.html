@@ -292,6 +292,34 @@
             font-size: 14px;
             font-weight: 400 !important;
         }
+        .settings-credential-row {
+            display: grid;
+            grid-template-columns: 3.5em minmax(0, 1fr);
+            align-items: center;
+            gap: 8px;
+        }
+        .settings-credential-row + .settings-credential-row {
+            margin-top: 8px;
+        }
+        .settings-credential-row .form-label {
+            margin: 0;
+        }
+        .redeem-code-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .redeem-code-row label {
+            flex: 0 0 auto;
+            margin: 0;
+        }
+        .redeem-code-row input {
+            min-width: 0;
+        }
+        .redeem-code-row button {
+            flex: 0 0 auto;
+        }
         #settingsError {
             margin-top: 8px;
             color: #8b1d1d;
@@ -405,10 +433,10 @@
         /* 九宮格按鈕樣式 */
         .mobile-numpad {
         display: none;
-        position: absolute; /* 讓它浮在畫面右側 */
-        top: 60%;
-        right: 0;
-        transform: translateY(-50%); /* 以自身高度一半往上拉，讓中心對齊 */
+        position: fixed;
+        top: 8px;
+        right: 8px;
+        transform: none;
         margin: 0;
         width: auto;
         opacity: 0.7;
@@ -445,6 +473,7 @@
         }
         .mobile-numpad {
             display: block;
+            z-index: 1001;
         }
         .bottom-container {
             flex-direction: column;
@@ -555,8 +584,8 @@
             min-height: 38px;
             padding: 6px 12px;
             gap: 5px;
-            font-family: var(--df-font-title);
-            font-size: 17px !important;
+            font-family: var(--df-font-ui);
+            font-size: 14px !important;
         }
 
         body.theme-dark-fantasy #targetInfoBar .target-icon,
@@ -868,9 +897,9 @@
 
             body.theme-dark-fantasy .mobile-numpad {
                 position: fixed;
-                top: auto;
+                top: 8px;
                 right: 8px;
-                bottom: calc(var(--mobile-bottom-height, 40vh) + 8px);
+                bottom: auto;
                 transform: none;
                 z-index: 1001;
             }
@@ -962,7 +991,7 @@
                     <span class="target-icon me-1" style="color:#ff4444;font-size:1.3em;"><i class="fas fa-gavel"></i></span>
                     <span id="targetName" style="color:#ff4444;min-width:90px;"></span>
                     <span id="targetHp" style="color:#ff4444;min-width:90px;"></span>
-                    <span class="target-arrow-icon ms-1 me-2" style="color:#ffe066;font-size:1.3em;"><i class="fas fa-angle-double-right"></i></span>
+                    <span class="target-arrow-icon ms-1 me-2" style="color:#ffe066;font-size:1.1em;"><i class="fas fa-angle-double-right"></i></span>
                     <span id="targetTargetName" style="color:#ffe066"></span>
                     <span id="targetTargetHp" style="color:#ffe066"></span>
                 </div>
@@ -1035,18 +1064,25 @@
                         <i class="fas fa-cog" aria-hidden="true"></i>
                     </button>
                     <section id="settingsPanel" hidden aria-label="遊戲設定">
-                        <button id="settingsClose" class="settings-window-control" type="button"
-                            aria-label="關閉設定">×</button>
                         <div class="settings-header">
                             <h2>冒險者設定</h2>
                             <button id="settingsReset" class="settings-reset-button" type="button">預設</button>
+                            <button id="settingsClose" class="settings-window-control" type="button"
+                                aria-label="關閉設定">×</button>
                         </div>
-                        <label class="form-label" for="savedAccount">帳號</label>
-                        <input id="savedAccount" class="form-control" type="text"
-                            autocomplete="username" maxlength="10">
-                        <label class="form-label mt-2" for="savedPassword">密碼</label>
-                        <input id="savedPassword" class="form-control" type="password"
-                            autocomplete="current-password" maxlength="10">
+                        <fieldset>
+                            <legend>自動登入</legend>
+                            <div class="settings-credential-row">
+                                <label class="form-label" for="savedAccount">帳號</label>
+                                <input id="savedAccount" class="form-control" type="text"
+                                    autocomplete="username" maxlength="10">
+                            </div>
+                            <div class="settings-credential-row">
+                                <label class="form-label" for="savedPassword">密碼</label>
+                                <input id="savedPassword" class="form-control" type="password"
+                                    autocomplete="current-password" maxlength="10">
+                            </div>
+                        </fieldset>
                         <label class="settings-notification-option">
                             <input id="chatNotificationSetting" class="form-check-input m-0" type="checkbox">
                             訊息提醒
@@ -1081,6 +1117,12 @@
                             <option value="white">白</option>
                         </select>
                         <div id="settingsError" role="status" aria-live="polite"></div>
+                        <div class="redeem-code-row">
+                            <label for="redeemCodeInput">兌換碼</label>
+                            <input id="redeemCodeInput" class="form-control" type="text"
+                                autocomplete="off" maxlength="100">
+                            <button id="redeemCodeButton" class="settings-reset-button" type="button">兌換</button>
+                        </div>
                     </section>
                 </div>
             </div>
@@ -1867,8 +1909,10 @@
         }
 
         function sendMessage(message) {
+            let selectInputAfterSend = false;
             if (!message) {
                 message = inputBox.value.trim();
+                selectInputAfterSend = true;
             }
 
             if (message) {
@@ -1885,7 +1929,7 @@
                 currentHistoryIndex = -1; // 重置歷史索引
                 
                 outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
-                inputBox.select(); // 全选文本
+                if (selectInputAfterSend) inputBox.select(); // 全选文本
                 resetInactivityTimer(); // 重置非活動計時器
             }
         }
@@ -1936,6 +1980,21 @@
         }
 
         sendButton.onclick = () => sendMessage();
+        const redeemCodeInput = document.getElementById('redeemCodeInput');
+        const redeemCodeButton = document.getElementById('redeemCodeButton');
+        function submitRedeemCode() {
+            const code = redeemCodeInput.value.trim();
+            if (!code) return;
+            sendMessage(`redeem ${code}`);
+            redeemCodeInput.value = '';
+        }
+        redeemCodeButton.addEventListener('click', submitRedeemCode);
+        redeemCodeInput.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitRedeemCode();
+            }
+        });
 
         inputBox.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
