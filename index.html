@@ -342,6 +342,61 @@
         #settingsPanel .settings-theme-row {
             margin-top: 12px;
         }
+        #settingsPanel .account-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        #settingsPanel .account-row label { flex: 0 0 auto; margin: 0; }
+        #settingsPanel .account-row .form-control { flex: 1 1 auto; min-width: 0; height: 30px; }
+        #settingsPanel .account-mail { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #settingsPanel .account-mail-status { flex: 0 0 auto; font-size: 12px; }
+        #settingsPanel .account-danger { margin-top: 8px; color: #ff6b6b; border-color: #ff6b6b; }
+        #settingsPanel [hidden] { display: none !important; }
+        /* 設定面板：置中顯示，可由標題列拖移 */
+        #settingsPanel {
+            position: fixed !important;
+            right: auto !important;
+            bottom: auto !important;
+            max-height: calc(100vh - 16px);
+            overflow-y: auto;
+        }
+        .settings-header {
+            cursor: move;
+            user-select: none;
+            touch-action: none;
+        }
+        /* 設定面板圓角統一 */
+        #settingsPanel .form-control,
+        #settingsPanel .form-select,
+        #settingsPanel .settings-reset-button,
+        #settingsPanel fieldset {
+            border-radius: 6px;
+        }
+        #settingsPanel .form-check-input[type="checkbox"] {
+            border-radius: 4px;
+        }
+        #settingsPanel button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        /* web view：角色資料放在設定面板右側 */
+        @media (min-width: 769px) {
+            #settingsPanel:has(#accountSection:not([hidden])) {
+                width: min(920px, calc(100vw - 24px));
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                column-gap: 20px;
+                align-content: start;
+            }
+            #settingsPanel:has(#accountSection:not([hidden])) > * {
+                grid-column: 1;
+            }
+            #settingsPanel:has(#accountSection:not([hidden])) > .settings-header {
+                grid-column: 1 / -1;
+            }
+            #settingsPanel:has(#accountSection:not([hidden])) > #accountSection {
+                grid-column: 2;
+                grid-row: 2 / span 8;
+                margin-top: 0;
+            }
+        }
         #settingsError {
             margin-top: 8px;
             color: #8b1d1d;
@@ -1360,6 +1415,27 @@
                                 autocomplete="off" maxlength="100">
                             <button id="redeemCodeButton" class="settings-reset-button" type="button">兌換</button>
                         </div>
+                        <fieldset id="accountSection" hidden>
+                            <legend>角色資料</legend>
+                            <div class="account-row">
+                                <label for="cnNameInput">中文名</label>
+                                <input id="cnNameInput" class="form-control" type="text" maxlength="8" autocomplete="off">
+                                <button id="cnNameButton" class="settings-reset-button" type="button">發送</button>
+                            </div>
+                            <div class="account-row">
+                                <label>信箱</label>
+                                <span id="mailText" class="account-mail"></span>
+                                <span id="mailStatus" class="account-mail-status"></span>
+                            </div>
+                            <div id="verifyRow" class="account-row">
+                                <input id="verifyCodeInput" class="form-control" type="text" maxlength="32"
+                                    autocomplete="off" placeholder="驗證碼">
+                                <button id="sendVerifyMailButton" class="settings-reset-button" type="button" disabled title="暫未開放">發送驗證信</button>
+                                <button id="submitVerifyCodeButton" class="settings-reset-button" type="button" disabled title="暫未開放">送出檢驗</button>
+                            </div>
+                            <div id="configToggles" class="status-options"></div>
+                            <button id="deleteCharacterButton" class="settings-reset-button account-danger" type="button">刪除角色</button>
+                        </fieldset>
                     </section>
                 </div>
             </div>
@@ -1437,6 +1513,7 @@
         let inputMode = null;
         let autoLoginStage = 'account';
         let inactivityTimer;
+        let reconnectTimer = null;
         let commandHistory = []; // 儲存命令歷史
         let currentHistoryIndex = -1; // 當前歷史記錄索引
 
@@ -2397,7 +2474,45 @@
             const shouldOpen = settingsPanel.hidden;
             settingsPanel.hidden = !shouldOpen;
             settingsButton.setAttribute('aria-expanded', String(shouldOpen));
+            if (shouldOpen) centerSettingsPanel();
         });
+        function clampSettingsPanel() {
+            if (settingsPanel.hidden) return;
+            const maxLeft = Math.max(0, window.innerWidth - settingsPanel.offsetWidth);
+            const maxTop = Math.max(0, window.innerHeight - settingsPanel.offsetHeight);
+            const left = Math.min(Math.max(0, settingsPanel.offsetLeft), maxLeft);
+            const top = Math.min(Math.max(0, settingsPanel.offsetTop), maxTop);
+            settingsPanel.style.left = `${left}px`;
+            settingsPanel.style.top = `${top}px`;
+        }
+        function centerSettingsPanel() {
+            settingsPanel.style.left = `${(window.innerWidth - settingsPanel.offsetWidth) / 2}px`;
+            settingsPanel.style.top = `${(window.innerHeight - settingsPanel.offsetHeight) / 2}px`;
+            clampSettingsPanel();
+        }
+        (function enableSettingsDrag() {
+            const header = settingsPanel.querySelector('.settings-header');
+            let drag = null;
+            header.addEventListener('pointerdown', event => {
+                if (event.target.closest('button')) return;
+                drag = {
+                    dx: event.clientX - settingsPanel.offsetLeft,
+                    dy: event.clientY - settingsPanel.offsetTop
+                };
+                header.setPointerCapture(event.pointerId);
+            });
+            header.addEventListener('pointermove', event => {
+                if (!drag) return;
+                settingsPanel.style.left = `${event.clientX - drag.dx}px`;
+                settingsPanel.style.top = `${event.clientY - drag.dy}px`;
+                clampSettingsPanel();
+            });
+            const endDrag = () => { drag = null; };
+            header.addEventListener('pointerup', endDrag);
+            header.addEventListener('pointercancel', endDrag);
+            window.addEventListener('resize', clampSettingsPanel);
+            new ResizeObserver(clampSettingsPanel).observe(settingsPanel);
+        })();
         function closeSettingsPanel() {
             settingsPanel.hidden = true;
             settingsButton.setAttribute('aria-expanded', 'false');
@@ -2567,8 +2682,11 @@
             inputMode = null;
             autoLoginStage = 'account';
             setPasswordInputMode(false);
-            ws = new WebSocket(SERVER_URL);
-            ws.onopen = () => {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+            const socket = new WebSocket(SERVER_URL);
+            ws = socket;
+            socket.onopen = () => {
                 setTag(); // 設置連線標記
                 /*outputDiv.innerHTML += '<span style="color: white;">Mars: Origin | 瑪爾斯群英傳: 起源</span>';*/
                 outputDiv.innerHTML +=
@@ -2580,8 +2698,9 @@
                 logWs('OPEN', `url=${SERVER_URL}`);
             };
 
-            ws.onmessage = async (event) => {
-                
+            socket.onmessage = async (event) => {
+                if (socket !== ws) return; // 舊連線的殘留訊息
+
                 /*
                 let messageOrigin;
                 try {
@@ -2606,6 +2725,8 @@
                         inputMode = pData.mode || null;
                     }else if (pData.type === 'map') {
                         updateMap(pData);
+                    }else if (pData.type === 'profile') {
+                        updateProfile(pData);
                     }else if (pData.type === 'passwordInput') {
                         setPasswordInputMode(pData.enabled === true);
                     }
@@ -2636,21 +2757,27 @@
                 setTag(); // 設置連線標記
             };
 
-            ws.onclose = () => {
+            socket.onclose = (event) => {
                 logWs('CLOSE', {
                     code: event.code,
                     reason: event.reason,
                     wasClean: event.wasClean,
-                    readyState: ws.readyState
+                    readyState: socket.readyState
                 });
+                // 已被新連線取代的舊 socket：不可影響目前的 ws
+                if (socket !== ws) return;
+                ws = null;
                 outputDiv.innerHTML += '<span style="color: red;">與伺服器中斷連線。</p>';
                 outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
                 removeTag(); // 清除連線標記
-                disconnect();
-                setTimeout(connect, 10000); // 10秒後嘗試重新連接
+                clearTimeout(inactivityTimer);
+                resetUI();
+                inputMode = null;
+                clearTimeout(reconnectTimer);
+                reconnectTimer = setTimeout(connect, 10000); // 10秒後嘗試重新連接
             };
 
-            ws.onerror = (error) => {
+            socket.onerror = (error) => {
                 console.error('WebSocket 錯誤:', error);
                 logWs('ERROR', 'WebSocket error; see close event for details '+ error);
                 outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
@@ -2679,6 +2806,11 @@
             }
 
             if (message) {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    outputDiv.innerHTML += '<span style="color: red;">尚未連線，請稍候重新連線或重新整理頁面。</span>\n';
+                    outputDiv.scrollTop = outputDiv.scrollHeight;
+                    return;
+                }
                 ws.send(JSON.stringify({ command: message, mode: inputMode, view: getClientView() }));
 
                 // 密碼輸入：不顯示在 output、不記錄歷史、清空輸入框
@@ -2720,6 +2852,8 @@
                 sendLogoutMessage();
                 removeTag(); // 清除連線標記
                 disconnect();
+                clearTimeout(reconnectTimer);
+                reconnectTimer = setTimeout(connect, 10000); // 閒置登出後 10 秒自動重連
             }, 300000); // 300秒後登出並斷開連接
         }
 
@@ -2733,9 +2867,10 @@
 
         function disconnect() {
             inputMode = null;
-            if (ws) {
-                ws.close(); // 關閉WebSocket連接
-                ws = null; // 清空ws變數
+            const old = ws;
+            ws = null; // 先清空，避免舊 socket 的 onclose 影響之後的新連線
+            if (old) {
+                try { old.close(); } catch (e) { /* ignore */ }
             }
             resetUI();
         }
@@ -2752,6 +2887,62 @@
         }
 
         sendButton.onclick = () => sendMessage();
+        const CONFIG_TOGGLES = [
+            [1, 'autoattack', '自動普通攻擊'],
+            [2, 'seeOtherDmg', '檢視其他玩家的普通攻擊'],
+            [3, 'autoloot', '自動拾取戰利品'],
+            [4, 'displayRecover', '顯示每小時的自動恢復量'],
+            [5, 'displayCooldown', '顯示冷卻中技能'],
+            [6, 'displayStats', '顯示生命狀態'],
+            [7, 'displayBody', '顯示身體機能'],
+            [9, 'displayHint', '顯示遊戲訣竅'],
+            [10, 'displayLoginOut', '顯示所有玩家登入與登出資訊']
+        ];
+        const accountSection = document.getElementById('accountSection');
+        const cnNameInput = document.getElementById('cnNameInput');
+        const verifyCodeInput = document.getElementById('verifyCodeInput');
+        const configToggles = document.getElementById('configToggles');
+        CONFIG_TOGGLES.forEach(([id, key, label]) => {
+            const row = document.createElement('label');
+            const box = document.createElement('input');
+            box.type = 'checkbox';
+            box.className = 'form-check-input m-0';
+            box.dataset.configKey = key;
+            box.addEventListener('change', () => sendMessage(`config ${box.checked ? '+' : '-'} ${id}`));
+            row.append(box, label);
+            configToggles.appendChild(row);
+        });
+        function hideProfile() {
+            accountSection.hidden = true;
+        }
+        function updateProfile(p) {
+            if (!p.loggedIn) { hideProfile(); return; }
+            accountSection.hidden = false;
+            if (document.activeElement !== cnNameInput) cnNameInput.value = p.cnName || '';
+            document.getElementById('mailText').textContent = p.mail || '(未設定)';
+            document.getElementById('mailStatus').textContent = p.mailVerified ? '已驗證' : '未驗證';
+            document.getElementById('verifyRow').hidden = p.mailVerified || !p.mail;
+            configToggles.querySelectorAll('input[data-config-key]').forEach(box => {
+                box.checked = !!(p.config && p.config[box.dataset.configKey]);
+            });
+        }
+        document.getElementById('cnNameButton').addEventListener('click', () => {
+            const name = cnNameInput.value.trim();
+            if (name) sendMessage(`config + 0 ${name}`);
+        });
+        document.getElementById('sendVerifyMailButton').addEventListener('click', () => sendMessage('verifymail send'));
+        document.getElementById('submitVerifyCodeButton').addEventListener('click', () => {
+            const code = verifyCodeInput.value.trim();
+            if (!code) return;
+            sendMessage(`verifymail ${code}`);
+            verifyCodeInput.value = '';
+        });
+        document.getElementById('deleteCharacterButton').addEventListener('click', () => {
+            if (confirm('確定要永久刪除這個角色嗎？此動作無法復原。')) {
+                sendMessage('config deletenow');
+            }
+        });
+
         const redeemCodeInput = document.getElementById('redeemCodeInput');
         const redeemCodeButton = document.getElementById('redeemCodeButton');
         function submitRedeemCode() {
@@ -2846,6 +3037,7 @@
 
     // 玩家中斷時重置 UI
     function resetUI() {
+        hideProfile();
         const inputBox = document.getElementById('inputBox');
         if (inputBox) inputBox.value = '';
 
