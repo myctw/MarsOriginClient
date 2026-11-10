@@ -17,6 +17,8 @@
             background-color: black;
             color: white;
             height: 100vh;
+            /* iOS Safari/Chrome: 100vh 含瀏覽器工具列後方區域,改用動態視窗高度 */
+            height: 100dvh;
             display: flex;
             flex-direction: column;
         }
@@ -2429,6 +2431,10 @@
             }
         });
         window.addEventListener('resize', setChatAreaHeight);
+        // 手機瀏覽器工具列收合/展開時,visualViewport 會變動但 window resize 不一定觸發
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', setChatAreaHeight);
+        }
         window.requestAnimationFrame(setChatAreaHeight);
 
         function updateChat(data) {
