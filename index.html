@@ -10,6 +10,9 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        :root {
+            --right-panel-width: var(--right-panel-width);
+        }
         body {
             background-color: black;
             color: white;
@@ -26,7 +29,7 @@
         #output-container {
             flex: 1;
             position: relative;
-            margin-right: 440px;
+            margin-right: var(--right-panel-width);
             background-color: black;
             overflow: hidden;
             display: flex;
@@ -126,7 +129,9 @@
         }
         .bottom-container {
             display: flex;
-            width: calc(100vw - 440px - 30px);
+            /* 實際 left / width 由 JS 依 #output 位置同步 */
+            right: var(--right-panel-width);
+            box-sizing: border-box;
             position: fixed;
             bottom: 0;
             left: 0;
@@ -320,6 +325,21 @@
         .redeem-code-row button {
             flex: 0 0 auto;
         }
+        /* 設定面板欄位高度縮小 20% (38px -> 30px)，覆蓋主題樣式 */
+        #settingsPanel #savedAccount,
+        #settingsPanel #savedPassword,
+        #settingsPanel #themeColor,
+        #settingsPanel #redeemCodeInput,
+        #settingsPanel #redeemCodeButton {
+            height: 30px;
+            min-height: 30px;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            line-height: 1.2;
+        }
+        #settingsPanel .settings-theme-row {
+            margin-top: 12px;
+        }
         #settingsError {
             margin-top: 8px;
             color: #8b1d1d;
@@ -363,7 +383,8 @@
             position: fixed;
             right: 0;
             top: 0;
-            width: 440px;
+            width: var(--right-panel-width);
+            box-sizing: border-box;
             height: 100vh;
             background-color: #1a1a1a;
             padding: 10px;
@@ -391,7 +412,8 @@
             font-family: monospace;
             white-space: pre-wrap;
             line-height: 1.2;
-            height: calc(100vh - 90px); /* Full height minus tabs and padding */
+            height: calc(100vh - 520px);
+            min-height: 120px;
             overflow-y: auto;
         }
         .tab-buttons {
@@ -490,6 +512,9 @@
             border-left: none;
             border-top: 1px solid #333;
         }
+        #targetInfoBar {
+            display: none !important;
+        }
         }
 
         body.theme-dark-fantasy {
@@ -525,7 +550,7 @@
         }
 
         body.theme-dark-fantasy #output-container {
-            margin-right: 360px;
+            margin-right: var(--right-panel-width);
             padding: 14px 16px 0;
             background: var(--df-bg);
             border-right: 1px solid var(--df-border-soft);
@@ -560,9 +585,8 @@
         }
 
         body.theme-dark-fantasy .bottom-container {
-            width: calc(100vw - 360px - 24px);
             gap: 8px;
-            padding: 0 12px 12px;
+            padding: 0 0 12px;
             align-items: stretch;
             box-sizing: border-box;
             background: linear-gradient(180deg, transparent, var(--df-bg) 14px);
@@ -778,7 +802,7 @@
 
         body.theme-dark-fantasy .right-panel {
             display: flex;
-            width: 360px;
+            width: var(--right-panel-width);
             gap: 10px;
             padding: 14px;
             color: var(--df-text);
@@ -912,7 +936,7 @@
 
             body.theme-dark-fantasy .bottom-container {
                 gap: 6px;
-                padding: 0 8px 8px;
+                padding: 0 0 8px;
             }
 
             body.theme-dark-fantasy .left-panel,
@@ -957,6 +981,215 @@
             body.theme-dark-fantasy .status-move {
                 flex: 1 1 30%;
             }
+        }
+
+        .map-window {
+            display: flex;
+            flex-direction: column;
+            flex: 0 0 auto;
+            width: 100%;
+            max-height: 420px;
+            overflow: hidden;
+            color: #eadbb8;
+            border: 1px solid #806b43;
+            border-radius: 12px;
+            background: #17191e;
+            box-shadow: 0 16px 60px #000;
+        }
+        .map-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-bottom: 1px solid #443a29;
+            font-size: 1rem;
+        }
+        .map-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 0 0 auto;
+        }
+        #mapTitle {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .map-toolbar button,
+        #mapCollapse {
+            color: #eadbb8;
+            border: 1px solid #645438;
+            border-radius: 6px;
+            background: #24262b;
+            padding: 5px 8px;
+            white-space: nowrap;
+        }
+        .map-toolbar button.active {
+            color: #17191e;
+            background: #d3b36a;
+        }
+        #mapCollapse {
+            flex: 0 0 auto;
+        }
+        .map-content {
+            min-height: 0;
+            padding: 8px;
+            overflow: auto;
+        }
+        .map-window.collapsed .map-content {
+            display: none;
+        }
+        #mapSvg {
+            display: block;
+            width: 100%;
+            height: 320px;
+            min-width: 0;
+            flex: 0 0 320px;
+            border: 1px solid #39352c;
+            border-radius: 8px;
+            background-color: #111318;
+            background-image: radial-gradient(#4b4230 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .map-link {
+            stroke: #8d7951;
+            stroke-width: 3;
+        }
+        .map-link.vertical {
+            stroke: #7196aa;
+            stroke-dasharray: 8 6;
+        }
+        .map-direction-label {
+            fill: #d7c18d;
+            font: 14px sans-serif;
+            paint-order: stroke;
+            stroke: #111318;
+            stroke-width: 4px;
+        }
+        .map-room-node {
+            cursor: pointer;
+        }
+        .map-room-node rect {
+            fill: #292b30;
+            stroke: #766442;
+            stroke-width: 2;
+        }
+        .map-room-node.current rect {
+            fill: #514326;
+            stroke: #e4c36e;
+            stroke-width: 3;
+        }
+        .map-room-node.neighbor:hover rect {
+            fill: #3e4a4b;
+            stroke: #a7d1d6;
+        }
+        .map-room-node text {
+            fill: #f0e6cf;
+            font: 28px sans-serif;
+            pointer-events: none;
+        }
+        .map-room-node .map-vertical-indicators {
+            fill: #8db9c9;
+            font-size: 16px;
+        }
+        @media (max-width: 576px) {
+            .map-window {
+                max-height: 420px;
+            }
+            .map-header {
+                gap: 5px;
+                padding: 6px;
+                font-size: .9rem;
+            }
+            .map-toolbar {
+                gap: 4px;
+            }
+            .map-toolbar button,
+            #mapCollapse {
+                padding: 4px 5px;
+                font-size: .8rem;
+            }
+        }
+
+        /* output-top 未使用時完全收合 (覆蓋各主題的 padding / border) */
+        body #output-container:not(.split-view) #output-top {
+            padding-top: 0;
+            padding-bottom: 0;
+            border-width: 0;
+        }
+        @media (max-width: 768px) {
+            body #output-container #output-top {
+                padding-top: 0;
+                padding-bottom: 0;
+                border-width: 0;
+            }
+        }
+
+        /* right-panel 左側寬度拖移控制 */
+        .right-panel-resizer {
+            position: fixed;
+            top: 0;
+            right: var(--right-panel-width);
+            width: 10px;
+            height: 100vh;
+            transform: translateX(50%);
+            cursor: col-resize;
+            z-index: 1002;
+            touch-action: none;
+        }
+        .right-panel-resizer[hidden] {
+            display: none;
+        }
+        .right-panel-resizer::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            transform: translateX(-50%);
+            background: transparent;
+            transition: background-color 0.15s;
+        }
+        .right-panel-resizer:hover::before,
+        body.is-resizing-right-panel .right-panel-resizer::before {
+            background: #87ceeb;
+        }
+        .right-panel-resizer::after {
+            content: "⇔ 按住左鍵拖移調整寬度";
+            position: absolute;
+            top: 50%;
+            right: calc(100% + 6px);
+            transform: translateY(-50%);
+            padding: 4px 8px;
+            white-space: nowrap;
+            font-size: 12px;
+            color: #fff;
+            background: #000c;
+            border: 1px solid #87ceeb;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .right-panel-resizer:hover::after {
+            opacity: 1;
+        }
+        body.is-resizing-right-panel .right-panel-resizer::after {
+            opacity: 0;
+        }
+        body.is-resizing-right-panel {
+            cursor: col-resize;
+            user-select: none;
+        }
+        body.theme-dark-fantasy .right-panel-resizer:hover::before,
+        body.theme-dark-fantasy.is-resizing-right-panel .right-panel-resizer::before {
+            background: var(--df-gold);
+        }
+        body.theme-dark-fantasy .right-panel-resizer::after {
+            border-color: var(--df-gold);
         }
     </style>
 </head>
@@ -1110,12 +1343,14 @@
                                 <label><input class="form-check-input m-0" type="checkbox" data-status-setting="level">等級</label>
                             </div>
                         </fieldset>
-                        <label class="form-label" for="themeColor">主題</label>
-                        <select id="themeColor" class="form-select">
-                            <option value="dark-fantasy">暗黑奇幻</option>
-                            <option value="green">綠</option>
-                            <option value="white">白</option>
-                        </select>
+                        <div class="settings-credential-row settings-theme-row">
+                            <label class="form-label" for="themeColor">主題</label>
+                            <select id="themeColor" class="form-select">
+                                <option value="dark-fantasy">暗黑奇幻</option>
+                                <option value="green">綠</option>
+                                <option value="white">白</option>
+                            </select>
+                        </div>
                         <div id="settingsError" role="status" aria-live="polite"></div>
                         <div class="redeem-code-row">
                             <label for="redeemCodeInput">兌換碼</label>
@@ -1130,8 +1365,23 @@
         </div>
     </div>
 
+    <!-- Right panel 寬度拖移控制 -->
+    <div class="right-panel-resizer" id="rightPanelResizer" role="separator" aria-orientation="vertical" aria-label="調整右側面板寬度" title="按住左鍵拖移調整寬度"></div>
     <!-- Right panel for equipment and inventory -->
     <div class="right-panel">
+        <section class="map-window" aria-labelledby="mapTitle">
+            <header class="map-header">
+                <strong id="mapTitle">地圖</strong>
+                <div class="map-toolbar">
+                    <button type="button" data-map-view="nearby" class="active">附近</button>
+                    <button type="button" data-map-view="area" hidden>區域全圖</button>
+                </div>
+                <button id="mapCollapse" type="button" aria-expanded="true">隱藏地圖</button>
+            </header>
+            <div class="map-content">
+                <svg id="mapSvg" role="img" aria-label="房間方向地圖"></svg>
+            </div>
+        </section>
         <div class="tab-buttons">
             <button class="tab-btn" id="inventoryTab">物品</button>
             <button class="tab-btn" id="equipmentTab">裝備</button>
@@ -1159,6 +1409,25 @@
         const MAX_OUTPUT_LINES = 200; // 最大輸出行數
         const MAX_COMMAND_HISTORY = 10; // 最大命令歷史記錄數
 
+        const mapState = { data: null, view: 'nearby' };
+        const NEARBY_MAP_VIEW_BOX = '50 40 900 520';
+        const mapDirectionNames = {
+            north: '北',
+            east: '東',
+            south: '南',
+            west: '西',
+            up: '上',
+            down: '下'
+        };
+        const mapDirectionOffsets = {
+            north: { x: 0, y: -1 },
+            east: { x: 1, y: 0 },
+            south: { x: 0, y: 1 },
+            west: { x: -1, y: 0 },
+            up: { x: 1, y: -1 },
+            down: { x: -1, y: 1 }
+        };
+
         let isSplitting = false;
         let isUserScrolling = false;
         let scrollTimer;
@@ -1168,6 +1437,366 @@
         let inactivityTimer;
         let commandHistory = []; // 儲存命令歷史
         let currentHistoryIndex = -1; // 當前歷史記錄索引
+
+        function createMapSvgElement(name, attributes = {}) {
+            const element = document.createElementNS('http://www.w3.org/2000/svg', name);
+            for (const [key, value] of Object.entries(attributes)) {
+                element.setAttribute(key, value);
+            }
+            return element;
+        }
+
+        function addMapNode(
+            svg,
+            room,
+            x,
+            y,
+            isCurrent,
+            direction,
+            action,
+            verticalActions = {}
+        ) {
+            const width = 156;
+            const height = 64;
+            const group = createMapSvgElement('g', {
+                class: `map-room-node${isCurrent ? ' current' : ''}${action ? ' neighbor' : ''}`,
+                transform: `translate(${x - width / 2}, ${y - height / 2})`
+            });
+            const rect = createMapSvgElement('rect', {
+                x: 0,
+                y: 0,
+                width,
+                height,
+                rx: 12
+            });
+            const title = createMapSvgElement('text', {
+                x: width / 2,
+                y: height / 2,
+                'text-anchor': 'middle',
+                'dominant-baseline': 'middle'
+            });
+            const roomName = Array.from(room.name || `房間 ${room.id}`);
+            title.textContent = roomName.slice(0, 5).join('');
+            group.append(rect, title);
+            for (const [index, verticalDirection] of ['up', 'down'].entries()) {
+                if (!room.connections?.[verticalDirection]) continue;
+                const indicator = createMapSvgElement('text', {
+                    class: 'map-vertical-indicators',
+                    x: width / 2 + (index === 0 ? -12 : 12),
+                    y: 61,
+                    'text-anchor': 'middle'
+                });
+                indicator.textContent = verticalDirection === 'up' ? '↑' : '↓';
+                if (verticalActions[verticalDirection]) {
+                    indicator.setAttribute('role', 'button');
+                    indicator.setAttribute('tabindex', '0');
+                    indicator.setAttribute(
+                        'aria-label',
+                        `${mapDirectionNames[verticalDirection]}：移動`
+                    );
+                    indicator.addEventListener('click', verticalActions[verticalDirection]);
+                    indicator.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            verticalActions[verticalDirection]();
+                        }
+                    });
+                }
+                group.append(indicator);
+            }
+            if (action) {
+                group.setAttribute('role', 'button');
+                group.setAttribute('tabindex', '0');
+                group.setAttribute(
+                    'aria-label',
+                    `${mapDirectionNames[direction]}：${room.name}，按下移動`
+                );
+                group.addEventListener('click', action);
+                group.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        action();
+                    }
+                });
+            }
+            svg.append(group);
+        }
+
+        function addMapLink(svg, from, to, direction, vertical = false) {
+            const line = createMapSvgElement('line', {
+                class: `map-link${vertical ? ' vertical' : ''}`,
+                x1: from.x,
+                y1: from.y,
+                x2: to.x,
+                y2: to.y
+            });
+            const label = createMapSvgElement('text', {
+                class: 'map-direction-label',
+                x: (from.x + to.x) / 2,
+                y: (from.y + to.y) / 2 - 8,
+                'text-anchor': 'middle'
+            });
+            label.textContent = mapDirectionNames[direction] || direction;
+            svg.append(line, label);
+        }
+
+        function fitMapSvgToContent(svg, fixedViewBox = null) {
+            if (fixedViewBox) {
+                svg.setAttribute('viewBox', fixedViewBox);
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                return;
+            }
+
+            const bounds = svg.getBBox();
+            if (!bounds.width || !bounds.height) {
+                svg.hidden = true;
+                return;
+            }
+
+            const padding = 12;
+            svg.setAttribute(
+                'viewBox',
+                `${bounds.x - padding} ${bounds.y - padding} ${bounds.width + padding * 2} ${bounds.height + padding * 2}`
+            );
+            svg.removeAttribute('width');
+            svg.removeAttribute('height');
+        }
+
+        function sendMapMove(direction) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            sendMessage(direction);
+        }
+
+        function getAreaMapPositions(rooms, currentRoomId) {
+            const roomById = new Map(rooms.map(room => [String(room.id), room]));
+            const positions = new Map();
+            const occupied = new Map();
+
+            function place(id, desired) {
+                let { x, y } = desired;
+                let radius = 0;
+
+                while (occupied.has(`${x},${y}`)) {
+                    radius += 1;
+                    for (let dx = -radius; dx <= radius; dx += 1) {
+                        const dy = radius - Math.abs(dx);
+                        const candidates = dy === 0
+                            ? [[dx, 0]]
+                            : [[dx, dy], [dx, -dy]];
+                        const free = candidates.find(([offsetX, offsetY]) =>
+                            !occupied.has(`${desired.x + offsetX},${desired.y + offsetY}`)
+                        );
+                        if (free) {
+                            [x, y] = [desired.x + free[0], desired.y + free[1]];
+                            break;
+                        }
+                    }
+                }
+
+                const position = { x, y };
+                occupied.set(`${x},${y}`, String(id));
+                positions.set(String(id), position);
+                return position;
+            }
+
+            const pending = [];
+            if (roomById.has(String(currentRoomId))) {
+                place(currentRoomId, { x: 0, y: 0 });
+                pending.push(String(currentRoomId));
+            }
+
+            function visitReachableRooms() {
+                while (pending.length > 0) {
+                    const id = pending.shift();
+                    const room = roomById.get(id);
+                    const position = positions.get(id);
+                    for (const [direction, target] of Object.entries(room.connections || {})) {
+                        const targetId = String(target.id);
+                        const offset = mapDirectionOffsets[direction];
+                        if (!offset || !roomById.has(targetId) || positions.has(targetId)) {
+                            continue;
+                        }
+                        place(targetId, {
+                            x: position.x + offset.x,
+                            y: position.y + offset.y
+                        });
+                        pending.push(targetId);
+                    }
+                }
+            }
+
+            visitReachableRooms();
+            rooms.forEach((room, index) => {
+                const id = String(room.id);
+                if (positions.has(id)) return;
+                place(id, { x: index * 2, y: 0 });
+                pending.push(id);
+                visitReachableRooms();
+            });
+
+            return positions;
+        }
+
+        function renderNearbyMap(svg, currentRoom) {
+            const rooms = mapState.data.rooms;
+            const roomById = new Map(rooms.map(room => [String(room.id), room]));
+            const pointFor = (room) => ({
+                x: 500 + room.x * 175,
+                y: 300 + room.y * 100
+            });
+            const directExits = new Map(
+                Object.entries(currentRoom.connections || {}).map(([direction, target]) => [
+                    String(target.id),
+                    direction
+                ])
+            );
+            const drawnLinks = new Set();
+
+            for (const room of rooms) {
+                for (const [direction, target] of Object.entries(room.connections || {})) {
+                    if (!roomById.has(String(target.id))) continue;
+                    const key = [String(room.id), String(target.id)].sort().join(':');
+                    if (drawnLinks.has(key)) continue;
+                    drawnLinks.add(key);
+                    addMapLink(svg, pointFor(room), pointFor(roomById.get(String(target.id))), direction);
+                }
+            }
+
+            for (const room of rooms) {
+                const direction = directExits.get(String(room.id));
+                const verticalActions = {};
+                if (room.id === currentRoom.id) {
+                    for (const verticalDirection of ['up', 'down']) {
+                        if (currentRoom.connections?.[verticalDirection]) {
+                            verticalActions[verticalDirection] = () => sendMapMove(verticalDirection);
+                        }
+                    }
+                }
+                const point = pointFor(room);
+                addMapNode(
+                    svg,
+                    room,
+                    point.x,
+                    point.y,
+                    String(room.id) === String(currentRoom.id),
+                    direction,
+                    direction ? () => sendMapMove(direction) : null,
+                    verticalActions
+                );
+            }
+        }
+
+        function renderAreaMap(svg, currentRoom) {
+            const rooms = mapState.data.areaRooms || [];
+            const roomById = new Map(rooms.map(room => [String(room.id), room]));
+            const positions = getAreaMapPositions(rooms, currentRoom.id);
+            const roomPositions = [...positions.values()];
+            const minX = Math.min(...roomPositions.map(position => position.x));
+            const maxX = Math.max(...roomPositions.map(position => position.x));
+            const minY = Math.min(...roomPositions.map(position => position.y));
+            const maxY = Math.max(...roomPositions.map(position => position.y));
+            const margin = 130;
+            const stepX = 190;
+            const stepY = 120;
+            const pointFor = (roomId) => {
+                const position = positions.get(String(roomId));
+                return {
+                    x: margin + (position.x - minX) * stepX,
+                    y: margin + (position.y - minY) * stepY
+                };
+            };
+            const drawnLinks = new Set();
+            for (const room of rooms) {
+                for (const [direction, target] of Object.entries(room.connections || {})) {
+                    if (!roomById.has(String(target.id))) continue;
+                    const key = [String(room.id), String(target.id)].sort().join(':');
+                    if (drawnLinks.has(key)) continue;
+                    drawnLinks.add(key);
+                    addMapLink(
+                        svg,
+                        pointFor(room.id),
+                        pointFor(target.id),
+                        direction,
+                        direction === 'up' || direction === 'down'
+                    );
+                }
+            }
+
+            for (const room of rooms) {
+                const exit = Object.entries(currentRoom.connections || {}).find(
+                    ([, target]) => String(target.id) === String(room.id)
+                );
+                const verticalActions = {};
+                if (String(room.id) === String(currentRoom.id)) {
+                    for (const verticalDirection of ['up', 'down']) {
+                        if (currentRoom.connections?.[verticalDirection]) {
+                            verticalActions[verticalDirection] = () => sendMapMove(verticalDirection);
+                        }
+                    }
+                }
+                addMapNode(
+                    svg,
+                    room,
+                    pointFor(room.id).x,
+                    pointFor(room.id).y,
+                    String(room.id) === String(currentRoom.id),
+                    exit?.[0],
+                    exit ? () => sendMapMove(exit[0]) : null,
+                    verticalActions
+                );
+            }
+        }
+
+        function renderMap() {
+            const svg = document.getElementById('mapSvg');
+            const currentRoom = mapState.data?.currentRoom;
+            document.getElementById('mapTitle').textContent = mapState.data
+                ? mapState.data.areaName
+                : '地圖';
+            svg.replaceChildren();
+
+            if (!currentRoom) {
+                svg.hidden = true;
+                return;
+            }
+
+            svg.hidden = false;
+            const areaMapButton = document.querySelector('[data-map-view="area"]');
+            areaMapButton.hidden = !mapState.data.canViewAreaMap;
+            if (!mapState.data.canViewAreaMap) mapState.view = 'nearby';
+            document.querySelectorAll('[data-map-view]').forEach(button => {
+                button.classList.toggle('active', button.dataset.mapView === mapState.view);
+            });
+
+            if (mapState.view === 'nearby') {
+                renderNearbyMap(svg, currentRoom);
+                fitMapSvgToContent(svg, NEARBY_MAP_VIEW_BOX);
+            } else {
+                renderAreaMap(svg, currentRoom);
+                fitMapSvgToContent(svg);
+            }
+        }
+
+        function updateMap(data) {
+            mapState.data = data.available ? data : null;
+            mapState.view = 'nearby';
+            renderMap();
+        }
+
+        document.querySelectorAll('[data-map-view]').forEach(button => {
+            button.addEventListener('click', () => {
+                if (button.hidden) return;
+                mapState.view = button.dataset.mapView;
+                renderMap();
+            });
+        });
+        document.getElementById('mapCollapse').addEventListener('click', (event) => {
+            const mapWindow = document.querySelector('.map-window');
+            const collapsed = mapWindow.classList.toggle('collapsed');
+            event.currentTarget.textContent = collapsed ? '顯示地圖' : '隱藏地圖';
+            event.currentTarget.setAttribute('aria-expanded', String(!collapsed));
+        });
 
         function logWs(event, detail = '') {
             console.log(`[WS ${new Date().toISOString()}] ${event}`,detail);
@@ -1199,8 +1828,24 @@
             // 監聽 output-top 的滾動事件
             outputTop.addEventListener('scroll', handleTopScroll);
             
+            // 只有使用者主動捲動才允許開啟 output-top
+            // (視窗縮放造成的 scroll 事件不算)
+            ['touchmove', 'keydown'].forEach(type => {
+                outputDiv.addEventListener(type, markUserScrollIntent, { passive: true });
+            });
+            outputDiv.addEventListener('pointerdown', () => {
+                isOutputPointerDown = true; // 拖曳捲軸
+            });
+            window.addEventListener('pointerup', () => {
+                isOutputPointerDown = false;
+            });
+            window.addEventListener('pointercancel', () => {
+                isOutputPointerDown = false;
+            });
+
             // 監聽滾輪事件來檢測用戶滾動
             outputDiv.addEventListener('wheel', () => {
+                markUserScrollIntent();
                 isUserScrolling = true;
                 clearTimeout(scrollTimer);
                 scrollTimer = setTimeout(() => {
@@ -1212,11 +1857,26 @@
             setInterval(checkAutoScroll, 100);
         }
         
+        let userScrollIntentUntil = 0;
+        let isOutputPointerDown = false;
+        function markUserScrollIntent() {
+            userScrollIntentUntil = Date.now() + 800;
+        }
+        function hasUserScrollIntent() {
+            return isOutputPointerDown || Date.now() < userScrollIntentUntil;
+        }
+
         // 處理 output 的滾動事件
         function handleOutputScroll() {
             // 如果已經在分割模式，不處理
             if (isSplitting) return;
-            
+
+            // 非使用者捲動 (例如調整視窗大小) 不開啟 output-top，維持在底部
+            if (!hasUserScrollIntent()) {
+                outputDiv.scrollTop = outputDiv.scrollHeight;
+                return;
+            }
+
             // 如果用戶向上滾動，切換到分割模式
             if (outputDiv.scrollTop < outputDiv.scrollHeight - outputDiv.clientHeight - 10) {
                 splitOutput();
@@ -1347,9 +2007,13 @@
             const inputHeight = inputArea.offsetHeight;
             const statusHeight = statusBar.offsetHeight;
             const targetInfoHeight = targetInfoBar.offsetHeight;
-            const chatHeight = inputHeight + statusHeight + targetInfoHeight;
+            const leftContentHeight = inputHeight + statusHeight + targetInfoHeight;
+            // mobile: chatArea 固定為視窗高度的 20%
+            const chatHeight = isMobileLayout
+                ? Math.round(window.innerHeight * 0.2)
+                : leftContentHeight;
             const leftPanelHeight = Math.max(
-                chatHeight,
+                leftContentHeight,
                 leftPanel.scrollHeight
             );
             const containerStyles = getComputedStyle(bottomContainer);
@@ -1364,7 +2028,84 @@
             chatArea.style.height = `${chatHeight}px`;
             bottomContainer.style.height = `${bottomHeight}px`;
             outputContainer.style.marginBottom = `${bottomHeight}px`;
+
+            // bottom-container 寬度與 #output 對齊
+            const outputRect = document.getElementById('output').getBoundingClientRect();
+            bottomContainer.style.left = `${outputRect.left}px`;
+            bottomContainer.style.width = `${outputRect.width}px`;
+
+            // right-panel 隱藏時一併隱藏拖移控制
+            const rightPanelResizer = document.getElementById('rightPanelResizer');
+            if (rightPanelResizer) {
+                rightPanelResizer.hidden =
+                    getComputedStyle(document.querySelector('.right-panel')).display === 'none';
+            }
         }
+
+        // ===== right-panel 寬度拖移 =====
+        (function initRightPanelResizer() {
+            const RIGHT_PANEL_WIDTH_KEY = 'marsII.rightPanelWidth';
+            const MIN_WIDTH = 280;
+            const MIN_OUTPUT_WIDTH = 360;
+            const resizer = document.getElementById('rightPanelResizer');
+            const root = document.documentElement;
+            let pendingFrame = 0;
+
+            function clampWidth(width) {
+                const maxWidth = Math.max(MIN_WIDTH, window.innerWidth - MIN_OUTPUT_WIDTH);
+                return Math.round(Math.min(Math.max(width, MIN_WIDTH), maxWidth));
+            }
+
+            function applyWidth(width) {
+                root.style.setProperty('--right-panel-width', `${clampWidth(width)}px`);
+                if (!pendingFrame) {
+                    pendingFrame = window.requestAnimationFrame(() => {
+                        pendingFrame = 0;
+                        // 觸發 resize，讓地圖與底部區塊重新計算
+                        window.dispatchEvent(new Event('resize'));
+                    });
+                }
+            }
+
+            try {
+                const saved = parseInt(localStorage.getItem(RIGHT_PANEL_WIDTH_KEY), 10);
+                if (Number.isFinite(saved)) applyWidth(saved);
+            } catch (e) { /* storage 不可用時使用預設寬度 */ }
+
+            resizer.addEventListener('pointerdown', event => {
+                if (event.button !== 0) return;
+                event.preventDefault();
+                resizer.setPointerCapture(event.pointerId);
+                document.body.classList.add('is-resizing-right-panel');
+            });
+
+            resizer.addEventListener('pointermove', event => {
+                if (!resizer.hasPointerCapture(event.pointerId)) return;
+                applyWidth(window.innerWidth - event.clientX);
+            });
+
+            resizer.addEventListener('pointerup', event => {
+                if (resizer.hasPointerCapture(event.pointerId)) {
+                    resizer.releasePointerCapture(event.pointerId);
+                }
+            });
+
+            // pointerup / pointercancel 後都會觸發
+            resizer.addEventListener('lostpointercapture', () => {
+                document.body.classList.remove('is-resizing-right-panel');
+                try {
+                    const width = parseInt(getComputedStyle(root).getPropertyValue('--right-panel-width'), 10);
+                    localStorage.setItem(RIGHT_PANEL_WIDTH_KEY, String(width));
+                } catch (e) { /* ignore */ }
+            });
+
+            // 視窗縮小時確保寬度仍在範圍內
+            window.addEventListener('resize', () => {
+                const current = parseInt(getComputedStyle(root).getPropertyValue('--right-panel-width'), 10);
+                const clamped = clampWidth(current);
+                if (clamped !== current) root.style.setProperty('--right-panel-width', `${clamped}px`);
+            });
+        })();
 
         const SETTINGS_STORAGE_KEY = 'marsII.clientSettings';
         const LEGACY_THEME_STORAGE_KEY = 'terminalThemeColor';
@@ -1516,8 +2257,7 @@
                         const settings = {
                             account: document.getElementById('savedAccount').value.trim(),
                             password: encryptedPassword,
-                            notifyChat: document.getElementById('chatNotificationSetting').checked,
-                            status: { ...currentSettings.status },
+                            notifyChat: document.getElementById('chatNotificationSetting').checked,                            status: { ...currentSettings.status },
                             theme: document.getElementById('themeColor').value
                         };
                         localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
@@ -1564,8 +2304,7 @@
                     ? storedSettings.account
                     : '';
                 currentSettings.notifyChat = storedSettings.notifyChat === true;
-                chatNotificationSetting.checked = currentSettings.notifyChat;
-                currentSettings.status = Object.fromEntries(STATUS_KEYS.map(key => [
+                chatNotificationSetting.checked = currentSettings.notifyChat;                currentSettings.status = Object.fromEntries(STATUS_KEYS.map(key => [
                     key,
                     typeof storedSettings.status?.[key] === 'boolean'
                         ? storedSettings.status[key]
@@ -1666,8 +2405,7 @@
             document.getElementById('savedAccount').value = '';
             document.getElementById('savedPassword').value = '';
             document.getElementById('chatNotificationSetting').checked = false;
-            currentSettings.notifyChat = false;
-            passwordChanged = true;
+            currentSettings.notifyChat = false;            passwordChanged = true;
             currentSettings.password = '';
             STATUS_KEYS.forEach(key => {
                 document.querySelector(`[data-status-setting="${key}"]`).checked = true;
@@ -1810,9 +2548,19 @@
             }
         }
 
+        // server 通知目前是否在輸入密碼 (登入 / 建立角色)
+        let isPasswordInput = false;
+        function setPasswordInputMode(enabled) {
+            isPasswordInput = enabled;
+            inputBox.type = enabled ? 'password' : 'text';
+            inputBox.setAttribute('autocomplete', enabled ? 'current-password' : 'off');
+            if (enabled) inputBox.value = '';
+        }
+
         function connect() {
             inputMode = null;
             autoLoginStage = 'account';
+            setPasswordInputMode(false);
             ws = new WebSocket(SERVER_URL);
             ws.onopen = () => {
                 setTag(); // 設置連線標記
@@ -1850,6 +2598,10 @@
                         updateChat(pData);
                     }else if (pData.type === 'mode') {
                         inputMode = pData.mode || null;
+                    }else if (pData.type === 'map') {
+                        updateMap(pData);
+                    }else if (pData.type === 'passwordInput') {
+                        setPasswordInputMode(pData.enabled === true);
                     }
                 
                 }else{
@@ -1908,6 +2660,11 @@
             }
         }
 
+        // 回傳給 server 的顯示模式: 'mobile' | 'web'，依視窗寬度判斷 (與 mobile layout 斷點一致)
+        function getClientView() {
+            return window.matchMedia('(max-width: 768px)').matches ? 'mobile' : 'web';
+        }
+
         function sendMessage(message) {
             let selectInputAfterSend = false;
             if (!message) {
@@ -1916,9 +2673,18 @@
             }
 
             if (message) {
-                ws.send(JSON.stringify({ command: message, mode: inputMode }));
+                ws.send(JSON.stringify({ command: message, mode: inputMode, view: getClientView() }));
+
+                // 密碼輸入：不顯示在 output、不記錄歷史、清空輸入框
+                if (isPasswordInput) {
+                    inputBox.value = '';
+                    outputDiv.scrollTop = outputDiv.scrollHeight;
+                    resetInactivityTimer();
+                    return;
+                }
+
                 outputDiv.innerHTML += '<span style="color: yellow;">'+message+'</span>\n';
-                
+
                 // 添加到命令歷史
                 if (!commandHistory.includes(message)) {
                     commandHistory.unshift(message);
@@ -1936,7 +2702,7 @@
 
         function sendSavedCredential(value) {
             if (!ws || ws.readyState !== WebSocket.OPEN) return false;
-            ws.send(JSON.stringify({ command: value, mode: inputMode }));
+            ws.send(JSON.stringify({ command: value, mode: inputMode, view: getClientView() }));
             inputBox.value = '';
             resetInactivityTimer();
             return true;
@@ -2043,7 +2809,8 @@
             }
 
             if (
-                inputMode === 'blacksmith' &&
+                // 互動模式 (鐵匠維修 / 商店購買、販售)：數字鍵直接送出
+                ['blacksmith', 'shop-buy', 'shop-sell'].includes(inputMode) &&
                 event.code.startsWith('Digit') &&
                 /^[0-9]$/.test(event.key)
             ) {
