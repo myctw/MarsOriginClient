@@ -1514,6 +1514,161 @@
         let autoLoginStage = 'account';
         let inactivityTimer;
         let reconnectTimer = null;
+
+        // ---- 連線診斷：回報給 server 的 db/log/conn_diag 日誌 ----
+        const DIAG_PING_MS = 30000;
+        const diag = {
+            sessionId: Math.random().toString(36).slice(2, 10) + Date.now().toString(36),
+            events: [], socket: null, openedAt: 0, lastServerMsgAt: 0,
+            rtt: { min: null, max: null, sum: 0, n: 0, last: null },
+            seq: 0, sent: {}, timer: null, hiddenSince: null, hiddenTotalMs: 0
+        };
+
+        function diagNetInfo() {
+            const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            return c ? { et: c.effectiveType, dl: c.downlink, nrtt: c.rtt, nt: c.type, sd: c.saveData } : null;
+        }
+
+        function diagEvent(type, x) {
+            diag.events.push({
+                t: Date.now(), type, vis: document.visibilityState, online: navigator.onLine,
+                x: x === undefined ? undefined : String(x).slice(0, 60)
+            });
+            if (diag.events.length > 40) diag.events.shift();
+        }
+
+        function diagBuildReport(event, source) {
+            const now = Date.now();
+            const r = diag.rtt;
+            return {
+                closeSource: source || (diag.socket && diag.socket.__closeSource) || 'remote_or_network',
+                code: event ? event.code : null,
+                reason: event ? event.reason : null,
+                wasClean: event ? event.wasClean : null,
+                closedAt: now,
+                connDurationMs: diag.openedAt ? now - diag.openedAt : null,
+                lastServerMsgAgoMs: diag.lastServerMsgAt ? now - diag.lastServerMsgAt : null,
+                vis: document.visibilityState,
+                online: navigator.onLine,
+                net: diagNetInfo(),
+                hiddenTotalMs: diag.hiddenTotalMs + (diag.hiddenSince ? now - diag.hiddenSince : 0),
+                rtt: r.n ? { min: r.min, max: r.max, avg: Math.round(r.sum / r.n), n: r.n, last: r.last } : null,
+                pendingPings: Object.keys(diag.sent).length,
+                events: diag.events.slice(-30)
+            };
+        }
+
+        function diagSaveReport(event, source) {
+            try { localStorage.setItem('marsDiagReport', JSON.stringify(diagBuildReport(event, source))); } catch (e) { /* ignore */ }
+        }
+
+        function diagSendPing(socket, drift) {
+            if (socket !== ws || socket.readyState !== WebSocket.OPEN) return;
+            const id = ++diag.seq;
+            const now = Date.now();
+            diag.sent[id] = now;
+            const keys = Object.keys(diag.sent);
+            if (keys.length > 10) delete diag.sent[keys[0]];
+            const r = diag.rtt;
+            const net = diagNetInfo() || {};
+            socket.send(JSON.stringify({
+                type: 'ping', id, t: now, drift,
+                vis: document.visibilityState, online: navigator.onLine,
+                et: net.et, dl: net.dl, nrtt: net.nrtt, nt: net.nt, sd: net.sd,
+                lost: Object.keys(diag.sent).length - 1,
+                rtt: r.last, rttMin: r.min, rttMax: r.max,
+                rttAvg: r.n ? Math.round(r.sum / r.n) : null, rttN: r.n
+            }));
+            try { localStorage.setItem('marsDiagAlive', JSON.stringify({ t: now, vis: document.visibilityState })); } catch (e) { /* ignore */ }
+        }
+
+        function diagStartPing(socket) {
+            clearInterval(diag.timer);
+            let expected = Date.now() + DIAG_PING_MS;
+            diag.timer = setInterval(() => {
+                const now = Date.now();
+                const drift = Math.max(0, now - expected); // 背景分頁被節流時會變很大
+                expected = now + DIAG_PING_MS;
+                diagSendPing(socket, drift);
+            }, DIAG_PING_MS);
+            setTimeout(() => diagSendPing(socket, 0), 3000); // 先快速量一次 RTT
+        }
+
+        function diagOnOpen(socket) {
+            const now = Date.now();
+            diag.socket = socket;
+            diag.openedAt = now;
+            diag.lastServerMsgAt = now;
+            diag.rtt = { min: null, max: null, sum: 0, n: 0, last: null };
+            diag.sent = {};
+            diag.hiddenTotalMs = 0;
+            diag.hiddenSince = document.visibilityState === 'hidden' ? now : null;
+            diagEvent('open');
+
+            let report = null;
+            let alive = null;
+            try { report = JSON.parse(localStorage.getItem('marsDiagReport') || 'null'); } catch (e) { /* ignore */ }
+            try { alive = JSON.parse(localStorage.getItem('marsDiagAlive') || 'null'); } catch (e) { /* ignore */ }
+            if (report && alive) {
+                report.prevLastAliveAt = alive.t;
+                report.prevLastAliveVis = alive.vis;
+            } else if (!report && alive) {
+                // 上一個頁面沒有留下任何關閉紀錄 (瀏覽器直接殺掉分頁 / 當機)
+                report = { closeSource: 'previous_page_killed_no_event', closedAt: alive.t,
+                    prevLastAliveAt: alive.t, prevLastAliveVis: alive.vis, events: [] };
+            }
+            const net = diagNetInfo() || {};
+            try {
+                socket.send(JSON.stringify({
+                    type: 'clientDiag', sessionId: diag.sessionId, view: getClientView(), report,
+                    current: { vis: document.visibilityState, online: navigator.onLine,
+                        et: net.et, dl: net.dl, nrtt: net.nrtt, nt: net.nt }
+                }));
+                try { localStorage.removeItem('marsDiagReport'); } catch (e) { /* ignore */ }
+            } catch (e) { /* ignore */ }
+
+            diagStartPing(socket);
+        }
+
+        function diagOnPong(data) {
+            let obj;
+            try { obj = JSON.parse(data); } catch (e) { return; }
+            if (!obj || typeof obj.t !== 'number') return;
+            const rtt = Date.now() - obj.t;
+            const r = diag.rtt;
+            r.last = rtt; r.n++; r.sum += rtt;
+            if (r.min === null || rtt < r.min) r.min = rtt;
+            if (r.max === null || rtt > r.max) r.max = rtt;
+            delete diag.sent[obj.id];
+        }
+
+        function diagOnClose(socket, event) {
+            diagEvent('close', event.code);
+            diagSaveReport(event, null);
+            if (socket === diag.socket) clearInterval(diag.timer);
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            const now = Date.now();
+            if (document.visibilityState === 'hidden') diag.hiddenSince = now;
+            else if (diag.hiddenSince) { diag.hiddenTotalMs += now - diag.hiddenSince; diag.hiddenSince = null; }
+            diagEvent('visibility', document.visibilityState);
+        });
+        window.addEventListener('online', () => diagEvent('online'));
+        window.addEventListener('offline', () => diagEvent('offline'));
+        window.addEventListener('pageshow', (e) => diagEvent('pageshow', e.persisted ? 'bfcache' : ''));
+        window.addEventListener('pagehide', (e) => {
+            diagEvent('pagehide', e.persisted ? 'bfcache' : '');
+            diagSaveReport(null, 'page_unload');
+        });
+        document.addEventListener('freeze', () => diagEvent('freeze'));
+        document.addEventListener('resume', () => diagEvent('resume'));
+        if (navigator.connection && navigator.connection.addEventListener) {
+            navigator.connection.addEventListener('change', () => {
+                const i = diagNetInfo();
+                diagEvent('netchange', i ? i.et + '/' + i.dl + '/' + i.nrtt : '');
+            });
+        }
         let commandHistory = []; // 儲存命令歷史
         let currentHistoryIndex = -1; // 當前歷史記錄索引
 
@@ -2687,6 +2842,7 @@
             const socket = new WebSocket(SERVER_URL);
             ws = socket;
             socket.onopen = () => {
+                diagOnOpen(socket);
                 setTag(); // 設置連線標記
                 /*outputDiv.innerHTML += '<span style="color: white;">Mars: Origin | 瑪爾斯群英傳: 起源</span>';*/
                 outputDiv.innerHTML +=
@@ -2700,6 +2856,11 @@
 
             socket.onmessage = async (event) => {
                 if (socket !== ws) return; // 舊連線的殘留訊息
+                diag.lastServerMsgAt = Date.now();
+                if (typeof event.data === 'string' && event.data.startsWith('{"type":"pong"')) {
+                    diagOnPong(event.data); // 診斷用 pong：不重設閒置計時器
+                    return;
+                }
 
                 /*
                 let messageOrigin;
@@ -2758,6 +2919,7 @@
             };
 
             socket.onclose = (event) => {
+                diagOnClose(socket, event);
                 logWs('CLOSE', {
                     code: event.code,
                     reason: event.reason,
@@ -2778,6 +2940,7 @@
             };
 
             socket.onerror = (error) => {
+                diagEvent('error');
                 console.error('WebSocket 錯誤:', error);
                 logWs('ERROR', 'WebSocket error; see close event for details '+ error);
                 outputDiv.scrollTop = outputDiv.scrollHeight; // 滾動到最底部
@@ -2851,7 +3014,7 @@
             inactivityTimer = setTimeout(() => {
                 sendLogoutMessage();
                 removeTag(); // 清除連線標記
-                disconnect();
+                disconnect('idle_300s');
                 clearTimeout(reconnectTimer);
                 reconnectTimer = setTimeout(connect, 10000); // 閒置登出後 10 秒自動重連
             }, 300000); // 300秒後登出並斷開連接
@@ -2865,11 +3028,12 @@
             }
         }
 
-        function disconnect() {
+        function disconnect(source) {
             inputMode = null;
             const old = ws;
             ws = null; // 先清空，避免舊 socket 的 onclose 影響之後的新連線
             if (old) {
+                old.__closeSource = source || 'client_disconnect';
                 try { old.close(); } catch (e) { /* ignore */ }
             }
             resetUI();
