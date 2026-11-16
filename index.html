@@ -116,6 +116,32 @@
             font-family: 'Consolas', 'Courier New', monospace;
             line-height: 0.4;
         }
+        /* 活動傳送按鈕:懸浮在 chatArea 正上方;right/bottom 由 JS 依 chatArea 實際位置計算 (layoutBossEventButton) */
+        .boss-event-button {
+            position: fixed;
+            width: 44px;
+            height: 44px;
+            padding: 6px;
+            border-radius: 50%;
+            border: 2px solid #ffd54a;
+            background: #1a1a1acc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+            box-shadow: 0 0 10px #ffd54a99;
+            animation: boss-event-pulse 1.6s ease-in-out infinite;
+            z-index: 1001;
+        }
+        .boss-event-button img { width: 100%; height: 100%; object-fit: contain; }
+        .boss-event-button:hover { filter: brightness(1.2); }
+        .boss-event-button[hidden] { display: none; }
+        @keyframes boss-event-pulse {
+            0%, 100% { box-shadow: 0 0 6px #ffd54a99; }
+            50% { box-shadow: 0 0 16px #ffd54a; }
+        }
 
         /* ===== 設定面板 (羊皮紙卷軸,置中顯示、可由標題列拖移) ===== */
         #settingsPanel {
@@ -1211,6 +1237,9 @@
                 </div>
             </div>
             <div id="chatArea"></div>
+            <button id="bossEventButton" class="item-link boss-event-button" type="button" data-cmd="" data-silent="true" hidden title="參加活動">
+                <img src="./assets/images/joinworldevent.svg" alt="參加活動">
+            </button>
         </div>
     </div>
 
@@ -1257,6 +1286,7 @@
         const outputDiv = $('output');
         const inputBox = $('inputBox');
         const chatArea = $('chatArea');
+        const bossEventButton = $('bossEventButton');
         const MAX_CHAT_LINES = 7;
         const MAX_OUTPUT_LINES = 200;
         const MAX_COMMAND_HISTORY = 10;
@@ -1711,8 +1741,82 @@
 
             // right-panel 隱藏時一併隱藏拖移控制
             rightPanelResizer.hidden = getComputedStyle(rightPanel).display === 'none';
+
+            layoutBossEventButton();
         }
         const relayout = () => window.requestAnimationFrame(setChatAreaHeight);
+
+        // 活動按鈕固定懸浮在 chatArea 正上方 (position:fixed,位置依 chatArea 實際位置即時計算,手機版 chatArea 在下方也適用)
+        // 玩家拖曳過就固定在拖曳的位置 (存 localStorage);沒拖曳過時:桌機在 chatArea 右上方,手機在畫面右上方 (方向鍵下方)
+        const BOSS_BUTTON_POS_KEY = 'marsII.bossEventButtonPos';
+        let bossButtonPos = null;
+        try { bossButtonPos = JSON.parse(localStorage.getItem(BOSS_BUTTON_POS_KEY)); } catch (e) { /* ignore */ }
+
+        function placeBossEventButton(left, top) {
+            const maxLeft = Math.max(0, window.innerWidth - bossEventButton.offsetWidth);
+            const maxTop = Math.max(0, window.innerHeight - bossEventButton.offsetHeight);
+            Object.assign(bossEventButton.style, {
+                left: `${Math.min(Math.max(0, left), maxLeft)}px`,
+                top: `${Math.min(Math.max(0, top), maxTop)}px`,
+                right: 'auto',
+                bottom: 'auto'
+            });
+        }
+
+        function layoutBossEventButton() {
+            if (bossButtonPos && Number.isFinite(bossButtonPos.left) && Number.isFinite(bossButtonPos.top)) {
+                placeBossEventButton(bossButtonPos.left, bossButtonPos.top);
+                return;
+            }
+            Object.assign(bossEventButton.style, { left: 'auto', top: 'auto' });
+            if (isMobileLayout()) {
+                const numpad = document.querySelector('.mobile-numpad').getBoundingClientRect();
+                bossEventButton.style.right = '8px';
+                bossEventButton.style.top = `${numpad.bottom + 8}px`;
+                bossEventButton.style.bottom = 'auto';
+                return;
+            }
+            const rect = chatArea.getBoundingClientRect();
+            bossEventButton.style.right = `${Math.max(8, window.innerWidth - rect.right + 10)}px`;
+            bossEventButton.style.bottom = `${Math.max(8, window.innerHeight - rect.top + 8)}px`;
+        }
+
+        // 拖曳 (滑鼠/觸控):移動超過 4px 才算拖曳,拖曳結束的那次 click 不送出指令
+        (function initBossEventButtonDrag() {
+            let start = null;
+            let dragged = false;
+            bossEventButton.addEventListener('pointerdown', event => {
+                const rect = bossEventButton.getBoundingClientRect();
+                start = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
+                dragged = false;
+                bossEventButton.setPointerCapture(event.pointerId);
+            });
+            bossEventButton.addEventListener('pointermove', event => {
+                if (!start) return;
+                const dx = event.clientX - start.x;
+                const dy = event.clientY - start.y;
+                if (!dragged && Math.hypot(dx, dy) < 4) return;
+                dragged = true;
+                bossButtonPos = { left: start.left + dx, top: start.top + dy };
+                placeBossEventButton(bossButtonPos.left, bossButtonPos.top);
+            });
+            const finish = () => {
+                if (start && dragged) {
+                    const rect = bossEventButton.getBoundingClientRect();
+                    bossButtonPos = { left: rect.left, top: rect.top };
+                    try { localStorage.setItem(BOSS_BUTTON_POS_KEY, JSON.stringify(bossButtonPos)); } catch (e) { /* ignore */ }
+                }
+                start = null;
+            };
+            bossEventButton.addEventListener('pointerup', finish);
+            bossEventButton.addEventListener('pointercancel', finish);
+            bossEventButton.addEventListener('click', event => {
+                if (!dragged) return;
+                dragged = false;
+                event.stopPropagation();
+                event.preventDefault();
+            });
+        })();
 
         // ===== right-panel 寬度拖移 =====
         (function initRightPanelResizer() {
@@ -2170,6 +2274,40 @@
             while (chatArea.childNodes.length > MAX_CHAT_LINES) chatArea.firstChild.remove();
         }
 
+        // 每日王城活動的 [參加活動] 浮動按鈕:同時可能有多場活動,只顯示最早開始的一場;
+        // action 'start' 表示活動開始 (或補送登入時仍在進行中的活動),'end'/'joined' 表示要把它從清單移除
+        const activeBossEvents = new Map();
+        function bossEventKey(data) {
+            return `${data.eventId}-${data.idx}-${data.dateKey}`;
+        }
+        function refreshBossEventButton() {
+            const next = activeBossEvents.values().next().value;
+            if (!next) {
+                bossEventButton.hidden = true;
+                bossEventButton.dataset.cmd = '';
+                return;
+            }
+            bossEventButton.dataset.cmd = `joinbossevent ${next.eventId} ${next.idx} ${next.dateKey}`;
+            bossEventButton.title = `參加「${next.name || '活動'}」`;
+            bossEventButton.hidden = false;
+            layoutBossEventButton();
+        }
+        const eventNotifySound = new Audio('./assets/images/event-notify.mp3');
+        function updateBossEvent(data) {
+            const key = bossEventKey(data);
+            if (data.action === 'start') {
+                // sound 由伺服器依玩家的「活動提醒音效」設定決定,只在活動首次開始時為 true
+                if (data.sound) {
+                    eventNotifySound.currentTime = 0;
+                    eventNotifySound.play().catch(() => {}); // 瀏覽器可能在使用者互動前擋掉自動播放
+                }
+                activeBossEvents.set(key, data);
+            } else {
+                activeBossEvents.delete(key);
+            }
+            refreshBossEventButton();
+        }
+
         // 名稱 + 生命百分比,例如「哥布林 (35%)」
         function setNameAndHp(nameId, hpId, name, hp) {
             $(nameId).textContent = name || '';
@@ -2253,7 +2391,10 @@
             [6, 'displayStats', '顯示生命狀態'],
             [7, 'displayBody', '顯示身體機能'],
             [9, 'displayHint', '顯示遊戲訣竅'],
-            [10, 'displayLoginOut', '顯示所有玩家登入與登出資訊']
+            [10, 'displayLoginOut', '顯示所有玩家登入與登出資訊'],
+            [11, 'eventSound', '活動提醒音效'],
+            [12, 'displayDayNight', '顯示晝夜變化訊息'],
+            [13, 'displayWeather', '顯示天氣變化訊息']
         ];
         CONFIG_TOGGLES.forEach(([id, key, label]) => {
             const row = document.createElement('label');
@@ -2326,7 +2467,8 @@
             profile: updateProfile,
             dot: showDotFloat,
             hot: showHotFloat,
-            passwordInput: data => setPasswordInputMode(data.enabled === true)
+            passwordInput: data => setPasswordInputMode(data.enabled === true),
+            bossEvent: updateBossEvent
         };
 
         // 自動登入:送出已儲存的帳號 / 密碼 (不顯示、不記錄歷史)
@@ -2411,7 +2553,8 @@
         }
 
         // 不帶參數時送出輸入框內容
-        function sendMessage(message) {
+        // silent: true 時不回顯送出的指令文字、也不記錄到指令歷史 (給 [點擊參加] 連結、活動按鈕這類不是玩家手動輸入的指令用)
+        function sendMessage(message, { silent = false } = {}) {
             const fromInput = !message;
             if (fromInput) message = inputBox.value.trim();
             if (!message) return;
@@ -2427,12 +2570,14 @@
                 return;
             }
 
-            appendOutput(`<span style="color: yellow;">${message}</span>\n`);
-            if (!commandHistory.includes(message)) {
-                commandHistory.unshift(message);
-                if (commandHistory.length > MAX_COMMAND_HISTORY) commandHistory.pop();
+            if (!silent) {
+                appendOutput(`<span style="color: yellow;">${message}</span>\n`);
+                if (!commandHistory.includes(message)) {
+                    commandHistory.unshift(message);
+                    if (commandHistory.length > MAX_COMMAND_HISTORY) commandHistory.pop();
+                }
+                currentHistoryIndex = -1;
             }
-            currentHistoryIndex = -1;
             if (fromInput) inputBox.select();
         }
 
@@ -2463,15 +2608,18 @@
             reserveSelfNameWidth();
             $('equipmentList').innerHTML = '';
             $('inventoryList').innerHTML = '';
+            // 斷線期間可能活動已結束,重新連線後由伺服器依目前狀態補送,這裡先清空避免殘留
+            activeBossEvents.clear();
+            refreshBossEventButton();
         }
 
         // ===== 輸入 =====
         $('sendButton').addEventListener('click', () => sendMessage());
 
-        // 裝備/物品清單的指令連結與手機方向按鈕
+        // 裝備/物品清單的指令連結、活動按鈕與手機方向按鈕;data-silent="true" 的連結/按鈕不回顯送出的指令文字
         document.addEventListener('click', event => {
             const target = event.target.closest?.('.item-link, .numpad-btn');
-            if (target?.dataset.cmd) sendMessage(target.dataset.cmd);
+            if (target?.dataset.cmd) sendMessage(target.dataset.cmd, { silent: target.dataset.silent === 'true' });
         });
 
         // 點擊畫面後,游標自動回到輸入框,不必再用滑鼠點輸入框就能直接打指令
