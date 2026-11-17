@@ -116,28 +116,161 @@
             font-family: 'Consolas', 'Courier New', monospace;
             line-height: 0.4;
         }
-        /* 活動傳送按鈕:懸浮在 chatArea 正上方;right/bottom 由 JS 依 chatArea 實際位置計算 (layoutBossEventButton) */
-        .boss-event-button {
+        /* 懸浮按鈕 (活動傳送、互動):懸浮在 chatArea 正上方;位置由 JS 依 chatArea 實際位置計算 (makeFloatingButton) */
+        .float-button {
             position: fixed;
             width: 44px;
             height: 44px;
             padding: 6px;
             border-radius: 50%;
-            border: 2px solid #ffd54a;
-            background: #1a1a1acc;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: grab;
             touch-action: none;
             user-select: none;
-            box-shadow: 0 0 10px #ffd54a99;
-            animation: boss-event-pulse 1.6s ease-in-out infinite;
             z-index: 1001;
         }
+        .float-button[hidden] { display: none; }
+        .float-button:hover { filter: brightness(1.2); }
+        .interact-button {
+            border: 2px solid #ffffff;
+            background: #1a1a1acc;
+            color: #ffffff;
+            font-size: 12px;
+            line-height: 1;
+            padding: 0;
+            box-shadow: 0 0 8px #ffffff66;
+        }
+        /* 羊皮卷軸選單:房間 NPC / 玩家的點擊選單、多個可互動物件時 [互動] 按鈕的選單共用 (openActionMenu)
+           紙面 = 羊皮紙漸層 + 汙漬 + SVG 雜訊紋理,邊緣以內陰影燒焦;上下 ::before/::after 為捲軸木軸 */
+        .scroll-menu {
+            --parchment-ink: #3b2410;
+            --parchment-title: #4a1f0a;
+            --parchment-edge: #8a5a2b;
+            --parchment-danger: #8a1c12;
+            --parchment-hover: rgba(122, 74, 30, 0.16);
+            --parchment-press: rgba(122, 74, 30, 0.28);
+            position: fixed;
+            min-width: 168px;
+            max-width: min(300px, calc(100vw - 24px));
+            padding: 18px 12px;
+            color: var(--parchment-ink);
+            font-family: Georgia, 'Times New Roman', 'Noto Serif TC', 'PMingLiU', 'MingLiU', serif;
+            background:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .22 0 0 0 0 .08 0 0 0 .28 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+                radial-gradient(circle at 18% 82%, rgba(150, 95, 40, 0.20), transparent 38%),
+                radial-gradient(circle at 86% 18%, rgba(150, 95, 40, 0.16), transparent 32%),
+                radial-gradient(ellipse at 50% 45%, #f6e7bf 0%, #ecd49c 55%, #d6ad66 100%);
+            border-left: 1px solid #b98a4a;
+            border-right: 1px solid #b98a4a;
+            box-shadow:
+                inset 0 0 18px rgba(110, 62, 18, 0.55),
+                inset 0 0 3px rgba(80, 40, 10, 0.6),
+                0 10px 24px rgba(0, 0, 0, 0.7);
+            line-height: 1.4;
+            z-index: 1002;
+            transform-origin: 50% 0;
+            animation: scroll-unfurl 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .scroll-menu[hidden] { display: none; }
+        .scroll-menu::before,
+        .scroll-menu::after {
+            content: '';
+            position: absolute;
+            left: -9px;
+            right: -9px;
+            height: 14px;
+            border-radius: 7px;
+            background:
+                radial-gradient(circle at 5px 50%, #2e1a08 3px, transparent 4px),
+                radial-gradient(circle at calc(100% - 5px) 50%, #2e1a08 3px, transparent 4px),
+                linear-gradient(to bottom, #e3b97f 0%, #a86f38 40%, #6e4119 75%, #4a2a10 100%);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.55);
+        }
+        .scroll-menu::before { top: -7px; }
+        .scroll-menu::after { bottom: -7px; }
+        .scroll-menu-title {
+            padding: 0 6px;
+            color: var(--parchment-title);
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .scroll-menu-title[hidden] { display: none; }
+        /* 標題下的分隔線:兩端淡出的墨線 + 中央菱形 */
+        .scroll-menu-divider {
+            position: relative;
+            height: 1px;
+            margin: 8px 10px 6px;
+            background: linear-gradient(90deg, transparent, var(--parchment-edge) 20%, var(--parchment-edge) 80%, transparent);
+        }
+        .scroll-menu-divider::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 7px;
+            height: 7px;
+            background: #f1ddaa;
+            border: 1px solid var(--parchment-edge);
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+        .scroll-menu-title[hidden] + .scroll-menu-divider { display: none; }
+        .scroll-menu-body {
+            max-height: 50vh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+        .scroll-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            min-height: 44px;
+            padding: 8px 12px;
+            border: 0;
+            border-radius: 4px;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            font-size: 15px;
+            text-align: left;
+            white-space: nowrap;
+            touch-action: manipulation;
+            transition: background-color 120ms ease-out;
+        }
+        .scroll-menu-item + .scroll-menu-item { margin-top: 2px; }
+        .scroll-menu-item > span { overflow: hidden; text-overflow: ellipsis; }
+        .scroll-menu-item svg { flex: 0 0 18px; width: 18px; height: 18px; }
+        .scroll-menu-item .scroll-menu-chevron { flex-basis: 14px; width: 14px; height: 14px; margin-left: auto; opacity: 0.7; }
+        .scroll-menu-item.is-back { color: #6b4420; font-size: 14px; }
+        .scroll-menu-note { padding: 10px 12px; color: #6b4420; font-size: 14px; font-style: italic; text-align: center; }
+        .scroll-menu .scroll-menu-item:hover { background: var(--parchment-hover); text-decoration: none; }
+        .scroll-menu-item:active { background: var(--parchment-press); }
+        .scroll-menu-item:focus-visible { outline: 2px solid var(--parchment-edge); outline-offset: -2px; }
+        .scroll-menu-item.is-danger { color: var(--parchment-danger); font-weight: 700; }
+        @keyframes scroll-unfurl {
+            from { opacity: 0; transform: scaleY(0.55); }
+            to { opacity: 1; transform: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .scroll-menu { animation: none; }
+        }
+        /* look 房間時 NPC / 其他玩家行尾的白色 [互動]:點擊跳出羊皮卷軸選單 */
+        .entity-link { cursor: pointer; }
+        .entity-link:hover { text-decoration: underline; }
+        .boss-event-button {
+            border: 2px solid #ffd54a;
+            background: #1a1a1acc;
+            box-shadow: 0 0 10px #ffd54a99;
+            animation: boss-event-pulse 1.6s ease-in-out infinite;
+        }
         .boss-event-button img { width: 100%; height: 100%; object-fit: contain; }
-        .boss-event-button:hover { filter: brightness(1.2); }
-        .boss-event-button[hidden] { display: none; }
         @keyframes boss-event-pulse {
             0%, 100% { box-shadow: 0 0 6px #ffd54a99; }
             50% { box-shadow: 0 0 16px #ffd54a; }
@@ -1237,9 +1370,17 @@
                 </div>
             </div>
             <div id="chatArea"></div>
-            <button id="bossEventButton" class="item-link boss-event-button" type="button" data-cmd="" data-silent="true" hidden title="參加活動">
+            <button id="bossEventButton" class="item-link float-button boss-event-button" type="button" data-cmd="" data-silent="true" hidden title="參加活動">
                 <img src="./assets/images/joinworldevent.svg" alt="參加活動">
             </button>
+            <!-- 房間有裝飾物時顯示;只有一個物件時 data-cmd 直接送出,多個時點擊跳出 actionMenu 選擇 -->
+            <button id="interactButton" class="item-link float-button interact-button" type="button" data-cmd="" data-silent="true" hidden title="互動">互動</button>
+            <!-- 羊皮卷軸選單:[互動] 多物件選單與房間 NPC / 玩家的點擊選單共用 -->
+            <div id="actionMenu" class="scroll-menu" role="menu" aria-labelledby="actionMenuTitle" hidden>
+                <div id="actionMenuTitle" class="scroll-menu-title"></div>
+                <div class="scroll-menu-divider" aria-hidden="true"></div>
+                <div id="actionMenuBody" class="scroll-menu-body"></div>
+            </div>
         </div>
     </div>
 
@@ -1287,6 +1428,13 @@
         const inputBox = $('inputBox');
         const chatArea = $('chatArea');
         const bossEventButton = $('bossEventButton');
+        const interactButton = $('interactButton');
+        const actionMenu = $('actionMenu');
+        const actionMenuTitle = $('actionMenuTitle');
+        const actionMenuBody = $('actionMenuBody');
+        // 目前開啟選單的元素 ([互動] 按鈕或 .entity-link) 與取得錨點位置的函式;放在這裡宣告,避免版面初始化時讀到 TDZ
+        let actionMenuOwner = null;
+        let actionMenuAnchor = null;
         const MAX_CHAT_LINES = 7;
         const MAX_OUTPUT_LINES = 200;
         const MAX_COMMAND_HISTORY = 10;
@@ -1743,80 +1891,99 @@
             rightPanelResizer.hidden = getComputedStyle(rightPanel).display === 'none';
 
             layoutBossEventButton();
+            layoutInteractButton();
         }
         const relayout = () => window.requestAnimationFrame(setChatAreaHeight);
 
-        // 活動按鈕固定懸浮在 chatArea 正上方 (position:fixed,位置依 chatArea 實際位置即時計算,手機版 chatArea 在下方也適用)
-        // 玩家拖曳過就固定在拖曳的位置 (存 localStorage);沒拖曳過時:桌機在 chatArea 右上方,手機在畫面右上方 (方向鍵下方)
-        const BOSS_BUTTON_POS_KEY = 'marsII.bossEventButtonPos';
-        let bossButtonPos = null;
-        try { bossButtonPos = JSON.parse(localStorage.getItem(BOSS_BUTTON_POS_KEY)); } catch (e) { /* ignore */ }
+        // 懸浮按鈕固定在 chatArea 正上方 (position:fixed,位置依 chatArea 實際位置即時計算,手機版 chatArea 在下方也適用)
+        // 玩家拖曳過就固定在拖曳的位置 (各自存 localStorage);沒拖曳過時:桌機在 chatArea 右上方,手機在畫面右上方 (方向鍵下方)
+        // slot: 預設位置從右邊數來第幾格 (0 = 最右),避免多個按鈕疊在一起
+        // onDragStart: 開始拖曳時呼叫 (例如收起按鈕的選單)
+        function makeFloatingButton(button, storageKey, slot, { onDragStart } = {}) {
+            const SLOT_WIDTH = 52;
+            let pos = null;
+            try { pos = JSON.parse(localStorage.getItem(storageKey)); } catch (e) { /* ignore */ }
 
-        function placeBossEventButton(left, top) {
-            const maxLeft = Math.max(0, window.innerWidth - bossEventButton.offsetWidth);
-            const maxTop = Math.max(0, window.innerHeight - bossEventButton.offsetHeight);
-            Object.assign(bossEventButton.style, {
-                left: `${Math.min(Math.max(0, left), maxLeft)}px`,
-                top: `${Math.min(Math.max(0, top), maxTop)}px`,
-                right: 'auto',
-                bottom: 'auto'
-            });
-        }
-
-        function layoutBossEventButton() {
-            if (bossButtonPos && Number.isFinite(bossButtonPos.left) && Number.isFinite(bossButtonPos.top)) {
-                placeBossEventButton(bossButtonPos.left, bossButtonPos.top);
-                return;
+            function place(left, top) {
+                const maxLeft = Math.max(0, window.innerWidth - button.offsetWidth);
+                const maxTop = Math.max(0, window.innerHeight - button.offsetHeight);
+                Object.assign(button.style, {
+                    left: `${Math.min(Math.max(0, left), maxLeft)}px`,
+                    top: `${Math.min(Math.max(0, top), maxTop)}px`,
+                    right: 'auto',
+                    bottom: 'auto'
+                });
             }
-            Object.assign(bossEventButton.style, { left: 'auto', top: 'auto' });
-            if (isMobileLayout()) {
-                const numpad = document.querySelector('.mobile-numpad').getBoundingClientRect();
-                bossEventButton.style.right = '8px';
-                bossEventButton.style.top = `${numpad.bottom + 8}px`;
-                bossEventButton.style.bottom = 'auto';
-                return;
-            }
-            const rect = chatArea.getBoundingClientRect();
-            bossEventButton.style.right = `${Math.max(8, window.innerWidth - rect.right + 10)}px`;
-            bossEventButton.style.bottom = `${Math.max(8, window.innerHeight - rect.top + 8)}px`;
-        }
 
-        // 拖曳 (滑鼠/觸控):移動超過 4px 才算拖曳,拖曳結束的那次 click 不送出指令
-        (function initBossEventButtonDrag() {
+            function layout() {
+                if (pos && Number.isFinite(pos.left) && Number.isFinite(pos.top)) {
+                    place(pos.left, pos.top);
+                    return;
+                }
+                Object.assign(button.style, { left: 'auto', top: 'auto' });
+                if (isMobileLayout()) {
+                    const numpad = document.querySelector('.mobile-numpad').getBoundingClientRect();
+                    button.style.right = `${8 + slot * SLOT_WIDTH}px`;
+                    button.style.top = `${numpad.bottom + 8}px`;
+                    button.style.bottom = 'auto';
+                    return;
+                }
+                const rect = chatArea.getBoundingClientRect();
+                button.style.right = `${Math.max(8, window.innerWidth - rect.right + 10) + slot * SLOT_WIDTH}px`;
+                button.style.bottom = `${Math.max(8, window.innerHeight - rect.top + 8)}px`;
+            }
+
+            // 拖曳 (滑鼠/觸控):移動超過 4px 才算拖曳,拖曳結束的那次 click 不送出指令
             let start = null;
             let dragged = false;
-            bossEventButton.addEventListener('pointerdown', event => {
-                const rect = bossEventButton.getBoundingClientRect();
+            button.addEventListener('pointerdown', event => {
+                const rect = button.getBoundingClientRect();
                 start = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
                 dragged = false;
-                bossEventButton.setPointerCapture(event.pointerId);
+                button.setPointerCapture(event.pointerId);
             });
-            bossEventButton.addEventListener('pointermove', event => {
+            button.addEventListener('pointermove', event => {
                 if (!start) return;
                 const dx = event.clientX - start.x;
                 const dy = event.clientY - start.y;
                 if (!dragged && Math.hypot(dx, dy) < 4) return;
+                if (!dragged) onDragStart?.();
                 dragged = true;
-                bossButtonPos = { left: start.left + dx, top: start.top + dy };
-                placeBossEventButton(bossButtonPos.left, bossButtonPos.top);
+                pos = { left: start.left + dx, top: start.top + dy };
+                place(pos.left, pos.top);
             });
             const finish = () => {
                 if (start && dragged) {
-                    const rect = bossEventButton.getBoundingClientRect();
-                    bossButtonPos = { left: rect.left, top: rect.top };
-                    try { localStorage.setItem(BOSS_BUTTON_POS_KEY, JSON.stringify(bossButtonPos)); } catch (e) { /* ignore */ }
+                    const rect = button.getBoundingClientRect();
+                    pos = { left: rect.left, top: rect.top };
+                    try { localStorage.setItem(storageKey, JSON.stringify(pos)); } catch (e) { /* ignore */ }
                 }
                 start = null;
             };
-            bossEventButton.addEventListener('pointerup', finish);
-            bossEventButton.addEventListener('pointercancel', finish);
-            bossEventButton.addEventListener('click', event => {
+            button.addEventListener('pointerup', finish);
+            button.addEventListener('pointercancel', finish);
+            // capture 階段攔下拖曳結束的 click,不讓按鈕自己的 click 處理與 document 的指令送出收到
+            button.addEventListener('click', event => {
                 if (!dragged) return;
                 dragged = false;
-                event.stopPropagation();
+                event.stopImmediatePropagation();
                 event.preventDefault();
-            });
-        })();
+            }, true);
+
+            return { layout };
+        }
+
+        const bossEventFloat = makeFloatingButton(bossEventButton, 'marsII.bossEventButtonPos', 0);
+        const interactFloat = makeFloatingButton(interactButton, 'marsII.interactButtonPos', 1, {
+            onDragStart: () => { if (actionMenuOwner === interactButton) hideActionMenu(); }
+        });
+        function layoutBossEventButton() {
+            bossEventFloat.layout();
+        }
+        function layoutInteractButton() {
+            interactFloat.layout();
+            positionActionMenu();
+        }
 
         // ===== right-panel 寬度拖移 =====
         (function initRightPanelResizer() {
@@ -2308,6 +2475,242 @@
             refreshBossEventButton();
         }
 
+        // 房間的 [互動] 浮動按鈕:伺服器在 look 房間時送來 { items: [...] };
+        // 房內 NPC 死亡 / 移動、玩家進出時也會推送 { items, refresh: true }
+        //   NPC / 其他玩家:{ label, actions: [{ label, cmd }] } (點了進入子選單:查看 / 攻擊)
+        //   裝飾物:{ label, cmd } (點了直接送出)
+        // 0 個:收起;只有 1 個裝飾物:按鈕直接送出;只有 1 個 NPC/玩家:直接開它的選單;多個:開清單選擇
+        let roomInteractItems = [];
+        function isValidActionCmd(action) {
+            return !!action && typeof action.cmd === 'string' && action.cmd !== '';
+        }
+        function updateRoomInteract(data) {
+            roomInteractItems = (Array.isArray(data.items) ? data.items : [])
+                .map(item => item && Array.isArray(item.actions)
+                    ? { label: item.label, actions: item.actions.filter(isValidActionCmd) }
+                    : item)
+                .filter(item => isValidActionCmd(item) || item?.actions?.length > 0);
+            if (data.refresh) {
+                // 房內異動:已開啟的選單保留,只換成最新內容 (對象已離開時收起)
+                refreshOpenActionMenu();
+            } else {
+                // 換房間 / 重新 look:舊的 NPC、玩家、物件選單都已失效
+                hideActionMenu();
+            }
+            if (roomInteractItems.length === 0) {
+                interactButton.hidden = true;
+                interactButton.dataset.cmd = '';
+                return;
+            }
+            const single = roomInteractItems.length === 1;
+            interactButton.dataset.cmd = single && roomInteractItems[0].cmd ? roomInteractItems[0].cmd : '';
+            interactButton.title = single
+                ? `互動:${roomInteractItems[0].label || ''}`
+                : `互動 (${roomInteractItems.length} 個對象)`;
+            interactButton.hidden = false;
+            layoutInteractButton();
+        }
+
+        // 目前清單中名稱為 label 的 NPC / 玩家的指令;同名的有多個時優先選指令完全相同的那個
+        // (同名 NPC 有一隻死亡後,剩下那隻的 "2.orc" 會變成 "orc",要用最新的指令)
+        function findCurrentActions(label, previousActions) {
+            const candidates = roomInteractItems.filter(item => item.actions && item.label === label);
+            if (!candidates.length) return null;
+            const previous = JSON.stringify(previousActions || []);
+            return (candidates.find(item => JSON.stringify(item.actions) === previous) || candidates[0]).actions;
+        }
+
+        function refreshOpenActionMenu() {
+            if (actionMenu.hidden || !actionMenuAnchor?.view) return;
+            const { owner, getRect, preferAbove, view } = actionMenuAnchor;
+            const options = { preferAbove, animate: false };
+            if (view.type === 'list') {
+                if (roomInteractItems.length) openInteractListMenu(options);
+                else hideActionMenu();
+                return;
+            }
+            const actions = findCurrentActions(view.label, view.actions);
+            if (actions) openEntityMenu(owner, getRect, view.label, actions, { ...options, fromList: view.fromList });
+            else if (view.fromList && roomInteractItems.length) openInteractListMenu(options);
+            else hideActionMenu();
+        }
+
+        // ===== 羊皮卷軸選單 (actionMenu) =====
+        // 選單項目前的線條圖示 (固定字串,依指令動詞挑選;不使用 emoji)
+        const ACTION_MENU_ICONS = {
+            look: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+            kill: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/></svg>',
+            interact: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.6 5.6 1.9-5.6 1.9L12 18l-1.9-5.6-5.6-1.9 5.6-1.9z"/><path d="M19 17v4M17 19h4"/></svg>',
+            target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>',
+            back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>',
+            more: '<svg class="scroll-menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>'
+        };
+
+        // item 四種:{ label, cmd } 送出指令;{ label, actions } 進入子選單;{ label, onSelect } 選單內的動作 (返回);
+        //          { label, note: true } 不可點的說明文字
+        function buildActionMenuItem(item) {
+            if (item.note) {
+                const note = document.createElement('div');
+                note.className = 'scroll-menu-note';
+                note.textContent = item.label;
+                return note;
+            }
+            const el = document.createElement('button');
+            el.type = 'button';
+            el.className = 'scroll-menu-item';
+            el.setAttribute('role', 'menuitem');
+            let icon;
+            if (item.cmd) {
+                const verb = String(item.cmd).split(' ')[0];
+                el.classList.add('item-link');
+                el.dataset.cmd = item.cmd;
+                el.dataset.silent = 'true';
+                if (verb === 'kill') el.classList.add('is-danger');
+                icon = ACTION_MENU_ICONS[verb] || ACTION_MENU_ICONS.interact;
+            } else if (item.actions) {
+                el.setAttribute('aria-haspopup', 'menu');
+                el.addEventListener('click', () => openActionSubMenu(item));
+                icon = ACTION_MENU_ICONS.target;
+            } else {
+                el.classList.add('is-back');
+                el.addEventListener('click', item.onSelect);
+                icon = ACTION_MENU_ICONS.back;
+            }
+            el.insertAdjacentHTML('afterbegin', icon);
+            const label = document.createElement('span');
+            label.textContent = item.label || item.cmd || '';
+            el.append(label);
+            if (item.actions) el.insertAdjacentHTML('beforeend', ACTION_MENU_ICONS.more);
+            el.title = label.textContent;
+            return el;
+        }
+
+        const getInteractButtonRect = () => interactButton.getBoundingClientRect();
+
+        // [互動] 按鈕的清單 (NPC、玩家、裝飾物)
+        function openInteractListMenu({ preferAbove = true, animate = true } = {}) {
+            openActionMenu(interactButton, getInteractButtonRect, '互動', roomInteractItems,
+                { preferAbove, animate, view: { type: 'list' } });
+        }
+
+        // 某個 NPC / 玩家的選單;從清單進入時 (fromList) 最後附「返回」
+        function openEntityMenu(owner, getRect, label, actions, { preferAbove = false, animate = true, fromList = false } = {}) {
+            const items = fromList
+                ? [...actions, { label: '返回', onSelect: () => openInteractListMenu({ preferAbove }) }]
+                : actions;
+            openActionMenu(owner, getRect, label, items,
+                { preferAbove, animate, view: { type: 'entity', label, actions, fromList } });
+        }
+
+        // 從清單進入某個 NPC / 玩家的子選單
+        function openActionSubMenu(item) {
+            if (!actionMenuAnchor) return;
+            const { owner, getRect, preferAbove } = actionMenuAnchor;
+            openEntityMenu(owner, getRect, item.label, item.actions, { preferAbove, fromList: true });
+        }
+
+        // owner: 開啟選單的元素;getAnchorRect: 回傳選單要貼齊的位置;items: 見 buildActionMenuItem
+        // view: 目前顯示的內容 (清單 / 某個對象),房內異動時 refreshOpenActionMenu 依此重畫
+        function openActionMenu(owner, getAnchorRect, title, items, { preferAbove = false, animate = true, view = null } = {}) {
+            const scrollTop = actionMenuBody.scrollTop;
+            actionMenuTitle.textContent = title || '';
+            actionMenuTitle.hidden = !title;
+            actionMenuBody.replaceChildren(...items.map(buildActionMenuItem));
+            // 刷新時保留捲動位置,不重播展開動畫
+            actionMenuBody.scrollTop = animate ? 0 : scrollTop;
+            actionMenuOwner = owner;
+            actionMenuAnchor = { owner, getRect: getAnchorRect, preferAbove, view };
+            if (animate) {
+                actionMenu.hidden = true;
+                void actionMenu.offsetWidth;
+            }
+            actionMenu.hidden = false;
+            positionActionMenu();
+        }
+
+        function hideActionMenu() {
+            actionMenu.hidden = true;
+            actionMenuBody.replaceChildren();
+            actionMenuOwner = null;
+            actionMenuAnchor = null;
+        }
+
+        // 水平置中對齊錨點;垂直依 preferAbove 放上方或下方,空間不夠時改放另一側;都限制在視窗內 (捲軸木軸凸出 9px)
+        function positionActionMenu() {
+            if (actionMenu.hidden || !actionMenuAnchor) return;
+            const rect = actionMenuAnchor.getRect();
+            const menuW = actionMenu.offsetWidth;
+            const menuH = actionMenu.offsetHeight;
+            const margin = 12;
+            const gap = 10;
+            const left = Math.min(Math.max(margin, rect.left + rect.width / 2 - menuW / 2), window.innerWidth - menuW - margin);
+            const aboveTop = rect.top - menuH - gap;
+            const belowTop = rect.bottom + gap;
+            const fitsAbove = aboveTop >= margin;
+            const fitsBelow = belowTop + menuH <= window.innerHeight - margin;
+            let top = actionMenuAnchor.preferAbove
+                ? (fitsAbove || !fitsBelow ? aboveTop : belowTop)
+                : (fitsBelow || !fitsAbove ? belowTop : aboveTop);
+            top = Math.min(Math.max(margin, top), window.innerHeight - menuH - margin);
+            actionMenu.style.left = `${Math.max(margin, left)}px`;
+            actionMenu.style.top = `${Math.max(margin, top)}px`;
+        }
+        window.addEventListener('resize', positionActionMenu);
+
+        // [互動] 按鈕沒有 data-cmd 時 (多個對象,或唯一的對象是 NPC/玩家),點擊切換選單
+        interactButton.addEventListener('click', () => {
+            if (interactButton.dataset.cmd) return; // 單一裝飾物:交給 document 的指令連結處理
+            if (!actionMenu.hidden && actionMenuOwner === interactButton) {
+                hideActionMenu();
+                return;
+            }
+            const only = roomInteractItems.length === 1 ? roomInteractItems[0] : null;
+            if (only?.actions) openEntityMenu(interactButton, getInteractButtonRect, only.label, only.actions, { preferAbove: true });
+            else openInteractListMenu();
+        });
+
+        // look 房間時 NPC / 其他玩家行尾的 [互動] (.entity-link):點擊跳出卷軸選單 (NPC:查看/攻擊;玩家:查看)
+        document.addEventListener('click', event => {
+            const link = event.target instanceof Element ? event.target.closest('.entity-link') : null;
+            if (!link) return;
+            // 拖曳選取文字時不開選單
+            const selection = window.getSelection();
+            if (selection && !selection.isCollapsed) return;
+            if (!actionMenu.hidden && actionMenuOwner === link) {
+                hideActionMenu();
+                return;
+            }
+            let actions;
+            try {
+                actions = JSON.parse(link.dataset.actions || '[]');
+            } catch {
+                return;
+            }
+            actions = Array.isArray(actions) ? actions.filter(isValidActionCmd) : [];
+            if (!actions.length) return;
+            const title = link.dataset.title;
+            const getRect = () => link.getBoundingClientRect();
+            // 舊訊息裡的連結:以房間目前的清單為準 (NPC 死亡後編號會變);對象已不在房間時不送舊指令,避免打到別的目標
+            const current = findCurrentActions(title, actions);
+            if (current) openEntityMenu(link, getRect, title, current);
+            else openActionMenu(link, getRect, title, [{ label: '已不在這裡', note: true }]);
+        });
+
+        // 點送出指令的選單項目 (指令由 document 的指令連結處理送出) 或點選單以外的地方時收起;開啟選單的元素自己處理切換
+        // 用 composedPath (事件發生當下的路徑):子選單 / 返回會先替換選單內容,這時 target 已離開 DOM,closest 找不到選單
+        document.addEventListener('click', event => {
+            if (actionMenu.hidden) return;
+            const path = event.composedPath().filter(node => node instanceof Element);
+            const opener = path.find(el => el.id === 'interactButton' || el.classList.contains('entity-link'));
+            if (opener && (opener === actionMenuOwner || opener.classList.contains('entity-link'))) return;
+            if (path.includes(actionMenu) && !path.some(el => el.classList.contains('scroll-menu-item') && el.dataset.cmd)) return;
+            // 等 document 的指令連結處理讀完 data-cmd 再清空選單
+            setTimeout(hideActionMenu, 0);
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !actionMenu.hidden) hideActionMenu();
+        });
+
         // 名稱 + 生命百分比,例如「哥布林 (35%)」
         function setNameAndHp(nameId, hpId, name, hp) {
             $(nameId).textContent = name || '';
@@ -2468,7 +2871,8 @@
             dot: showDotFloat,
             hot: showHotFloat,
             passwordInput: data => setPasswordInputMode(data.enabled === true),
-            bossEvent: updateBossEvent
+            bossEvent: updateBossEvent,
+            roomInteract: updateRoomInteract
         };
 
         // 自動登入:送出已儲存的帳號 / 密碼 (不顯示、不記錄歷史)
@@ -2611,6 +3015,7 @@
             // 斷線期間可能活動已結束,重新連線後由伺服器依目前狀態補送,這裡先清空避免殘留
             activeBossEvents.clear();
             refreshBossEventButton();
+            updateRoomInteract({ items: [] });
         }
 
         // ===== 輸入 =====
@@ -2638,7 +3043,8 @@
             document.addEventListener('click', event => {
                 const target = event.target;
                 if (!(target instanceof Element)) return;
-                const isCommandLink = !!target.closest('.item-link');
+                // 沒有 data-cmd 的 (例如多個物件時的 [互動] 按鈕,只負責開選單) 不算指令連結,避免手機彈出鍵盤蓋住選單
+                const isCommandLink = !!target.closest('.item-link:not([data-cmd=""])');
                 const isSend = !!target.closest('#sendButton, .mobile-numpad');
                 if (event.pointerType === 'touch' && !isCommandLink && !isSend) return;
                 if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
