@@ -1414,12 +1414,15 @@
     <script>
         const $ = id => document.getElementById(id);
 
-        // 優先順序: ?server=ws://host:port  >  本機(localhost/127.0.0.1/file://) 用開發機  >  正式機
+        // 優先順序: 本機才允許 ?server=ws://host:port  >  本機用開發機  >  正式機
+        // 正式站不接受 ?server= 覆寫,避免釣魚伺服器透過連結竊取自動登入的帳密
         const SERVER_URL = (() => {
-            const override = new URLSearchParams(location.search).get('server');
-            if (override && /^wss?:\/\/[\w.\-]+(:\d+)?$/.test(override)) return override;
             const host = location.hostname;
             const isLocal = location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1';
+            if (isLocal) {
+                const override = new URLSearchParams(location.search).get('server');
+                if (override && /^wss?:\/\/[\w.\-]+(:\d+)?$/.test(override)) return override;
+            }
             return isLocal ? 'ws://localhost:9999' : 'wss://wssmo.myctw.cc:443';
         })();
         const outputContainer = $('output-container');
@@ -1450,6 +1453,9 @@
         let reconnectTimer = null;
         const commandHistory = [];
         let currentHistoryIndex = -1;
+
+        const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+        const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESC[c]);
 
         const isMobileLayout = () => window.matchMedia(MOBILE_QUERY).matches;
         // 回傳給 server 的顯示模式,依視窗寬度判斷 (與 mobile layout 斷點一致)
@@ -1616,6 +1622,8 @@
             west: { x: -1, y: 0 }, up: { x: 1, y: -1 }, down: { x: -1, y: 1 }
         };
         const mapSvg = $('mapSvg');
+        let drawTarget = mapSvg; // 目前繪圖的 SVG(附近地圖或區域全圖視窗)
+        let areaWin = null;
 
         function svgElement(name, attributes = {}) {
             const element = document.createElementNS('http://www.w3.org/2000/svg', name);
@@ -1651,7 +1659,7 @@
             if (direction) {
                 makeActivatable(group, `${mapDirectionNames[direction]}：${room.name}，按下移動`, () => sendMessage(direction));
             }
-            mapSvg.append(group);
+            drawTarget.append(group);
         }
 
         function addMapLink(from, to, direction, vertical) {
@@ -1666,7 +1674,7 @@
                 'text-anchor': 'middle'
             });
             label.textContent = mapDirectionNames[direction] || direction;
-            mapSvg.append(line, label);
+            drawTarget.append(line, label);
         }
 
         // 畫出房間與連線;pointFor(room) 回傳房間座標;markVertical 時上下樓連線用虛線
@@ -1740,58 +1748,99 @@
             return positions;
         }
 
+        const areaWinOpen = () => Boolean(areaWin && !areaWin.closed);
+
         function renderMap() {
             const data = mapState.data;
             const currentRoom = data?.currentRoom;
             $('mapTitle').textContent = data ? data.areaName : '地圖';
             mapSvg.replaceChildren();
             mapSvg.hidden = !currentRoom;
-            if (!currentRoom) return;
-
-            document.querySelector('[data-map-view="area"]').hidden = !data.canViewAreaMap;
-            if (!data.canViewAreaMap) mapState.view = 'nearby';
-            document.querySelectorAll('[data-map-view]').forEach(button => {
-                button.classList.toggle('active', button.dataset.mapView === mapState.view);
-            });
-
-            if (mapState.view === 'nearby') {
-                drawMapRooms(data.rooms, currentRoom, room => ({ x: 500 + room.x * 175, y: 300 + room.y * 100 }), false);
-                mapSvg.setAttribute('viewBox', NEARBY_MAP_VIEW_BOX);
+            if (!currentRoom) {
+                if (areaWinOpen()) areaWin.close();
                 return;
             }
 
+            // 區域全圖資料只有 wizard 會收到(伺服器端判斷),沒有 areaRooms 就不提供
+            const hasArea = Boolean(data.canViewAreaMap && data.areaRooms);
+            const areaButton = document.querySelector('[data-map-view="area"]');
+            areaButton.hidden = !hasArea;
+            if (!hasArea && areaWinOpen()) areaWin.close();
+            areaButton.classList.toggle('active', areaWinOpen());
+
+            drawTarget = mapSvg;
+            drawMapRooms(data.rooms, currentRoom, room => ({ x: 500 + room.x * 175, y: 300 + room.y * 100 }), false);
+            mapSvg.setAttribute('viewBox', NEARBY_MAP_VIEW_BOX);
+
+            if (hasArea && areaWinOpen()) renderAreaMap(data);
+        }
+
+        const AREA_WIN_HTML = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>區域全圖</title><style>
+            html, body { margin: 0; height: 100%; background: #17191e; color: #eadbb8; font: 16px sans-serif; }
+            body { display: flex; flex-direction: column; }
+            header { padding: 8px 12px; border-bottom: 1px solid #443a29; }
+            main { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px; }
+            svg { display: block; min-width: 100%; min-height: 100%; border: 1px solid #39352c; border-radius: 8px;
+                background-color: #111318; background-image: radial-gradient(#4b4230 1px, transparent 1px); background-size: 24px 24px; }
+            .map-link { stroke: #8d7951; stroke-width: 3; }
+            .map-link.vertical { stroke: #7196aa; stroke-dasharray: 8 6; }
+            .map-direction-label { fill: #d7c18d; font: 14px sans-serif; paint-order: stroke; stroke: #111318; stroke-width: 4px; }
+            .map-room-node { cursor: pointer; }
+            .map-room-node rect { fill: #292b30; stroke: #766442; stroke-width: 2; }
+            .map-room-node.current rect { fill: #514326; stroke: #e4c36e; stroke-width: 3; }
+            .map-room-node.neighbor:hover rect { fill: #3e4a4b; stroke: #a7d1d6; }
+            .map-room-node text { fill: #f0e6cf; font: 28px sans-serif; pointer-events: none; }
+            .map-room-node .map-vertical-indicators { fill: #8db9c9; font-size: 16px; }
+        </style></head><body><header><strong id="t">區域全圖</strong></header>
+        <main><svg id="s" xmlns="http://www.w3.org/2000/svg"></svg></main></body></html>`;
+
+        // 區域全圖:真正獨立的瀏覽器視窗(可拖到其他螢幕),以原始尺寸繪製,超出時捲動
+        function renderAreaMap(data) {
+            const doc = areaWin.document;
+            const svg = doc.getElementById('s');
+            if (!svg) return;
             const rooms = data.areaRooms || [];
-            const positions = getAreaMapPositions(rooms, currentRoom.id);
+            doc.getElementById('t').textContent = `${data.areaName} 區域全圖(${rooms.length} 間)`;
+            svg.replaceChildren();
+            if (!rooms.length) return;
+            const positions = getAreaMapPositions(rooms, data.currentRoom.id);
             const all = [...positions.values()];
             const minX = Math.min(...all.map(p => p.x));
             const minY = Math.min(...all.map(p => p.y));
-            drawMapRooms(rooms, currentRoom, room => {
+            drawTarget = svg;
+            drawMapRooms(rooms, data.currentRoom, room => {
                 const p = positions.get(String(room.id));
                 return { x: 130 + (p.x - minX) * 190, y: 130 + (p.y - minY) * 120 };
             }, true);
-            const bounds = mapSvg.getBBox();
-            if (!bounds.width || !bounds.height) {
-                mapSvg.hidden = true;
-                return;
-            }
+            drawTarget = mapSvg;
+            const bounds = svg.getBBox();
+            if (!bounds.width || !bounds.height) return;
             const padding = 12;
-            mapSvg.setAttribute('viewBox',
-                `${bounds.x - padding} ${bounds.y - padding} ${bounds.width + padding * 2} ${bounds.height + padding * 2}`);
+            const w = Math.ceil(bounds.width + padding * 2);
+            const h = Math.ceil(bounds.height + padding * 2);
+            svg.setAttribute('viewBox', `${bounds.x - padding} ${bounds.y - padding} ${w} ${h}`);
+            svg.setAttribute('width', w);
+            svg.setAttribute('height', h);
         }
 
         function updateMap(data) {
             mapState.data = data.available ? data : null;
-            mapState.view = 'nearby';
             renderMap();
         }
 
-        document.querySelectorAll('[data-map-view]').forEach(button => {
-            button.addEventListener('click', () => {
-                if (button.hidden) return;
-                mapState.view = button.dataset.mapView;
-                renderMap();
-            });
-        });
+        function openAreaMapWindow() {
+            if (!mapState.data?.areaRooms) return;
+            if (areaWinOpen()) { areaWin.focus(); return; }
+            areaWin = window.open('', 'marsAreaMap', 'popup=yes,width=1200,height=800');
+            if (!areaWin) { alert('瀏覽器擋住了彈出視窗,請允許此網站開啟彈出視窗'); return; }
+            areaWin.document.open();
+            areaWin.document.write(AREA_WIN_HTML);
+            areaWin.document.close();
+            areaWin.addEventListener('pagehide', () => setTimeout(renderMap, 0));
+            renderMap();
+        }
+        document.querySelector('[data-map-view="area"]').addEventListener('click', openAreaMapWindow);
+        window.addEventListener('beforeunload', () => { if (areaWinOpen()) areaWin.close(); });
         $('mapCollapse').addEventListener('click', event => {
             const collapsed = document.querySelector('.map-window').classList.toggle('collapsed');
             event.currentTarget.textContent = collapsed ? '顯示地圖' : '隱藏地圖';
@@ -2975,7 +3024,7 @@
             }
 
             if (!silent) {
-                appendOutput(`<span style="color: yellow;">${message}</span>\n`);
+                appendOutput(`<span style="color: yellow;">${escapeHtml(message)}</span>\n`);
                 if (!commandHistory.includes(message)) {
                     commandHistory.unshift(message);
                     if (commandHistory.length > MAX_COMMAND_HISTORY) commandHistory.pop();
