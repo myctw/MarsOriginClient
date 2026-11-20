@@ -1,0 +1,24 @@
+# 瑪爾斯群英傳: 起源 Mars: Origin
+# https://marsorigin.myctw.cc/
+
+User-agent: *
+Allow: /
+
+# AI 爬蟲:全部允許 (讓 AI 助理能讀到並介紹本遊戲)
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-User
+User-agent: Claude-SearchBot
+User-agent: anthropic-ai
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: CCBot
+User-agent: Bytespider
+User-agent: Meta-ExternalAgent
+Allow: /
+
+Sitemap: https://marsorigin.myctw.cc/sitemap.xml
