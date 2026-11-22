@@ -1,0 +1,334 @@
+/* 登入 / 創角畫面 (auth.js)。全螢幕遮罩;手機整頁、桌機置中卡片 */
+#authPanel {
+    --au-bg: #0b0e18;
+    --au-card: #121726;
+    --au-surface: #1a2033;
+    --au-surface-hi: #222a42;
+    --au-line: #2c3452;
+    --au-gold: #c9a55a;
+    --au-gold-hi: #f3dc9b;
+    --au-gold-lo: #5c4a26;
+    --au-accent: #8fd3ff;
+    --au-accent-glow: #6cc4ff44;
+    --au-text: #e8e6f0;
+    --au-muted: #a9adc4;
+    --au-danger: #ff9a8a;
+    --au-ok: #8fe3a8;
+    position: fixed;
+    inset: 0;
+    z-index: 1070;
+    /* flex + 卡片 margin:auto 置中:卡片比畫面高時從頂端開始、可以捲動
+       (grid place-items:center 會把超出的上半部裁掉,手機橫放時看不到橫幅) */
+    display: flex;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px;
+    color: var(--au-text);
+    background:
+        radial-gradient(ellipse at 50% 0%, #3a2c5a55, transparent 60%),
+        radial-gradient(circle at 12% 22%, #ffffff44 0 1px, transparent 2px),
+        radial-gradient(circle at 84% 16%, #cfe9ff55 0 1px, transparent 2px),
+        radial-gradient(circle at 70% 80%, #ffffff33 0 1px, transparent 2px),
+        var(--au-bg);
+    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+#authPanel[hidden] { display: none; }
+
+.auth-card {
+    --au-pad-x: 22px;
+    --au-pad-top: 22px;
+    width: min(480px, 100%);
+    flex: none;
+    margin: auto;
+    overflow: hidden;
+    padding: var(--au-pad-top) var(--au-pad-x) 18px;
+    background: linear-gradient(180deg, #161c2e, var(--au-card));
+    border: 2px solid var(--au-gold);
+    border-radius: 16px;
+    box-shadow: 0 0 0 4px var(--au-bg), 0 0 0 5px var(--au-gold-lo), 0 0 36px #6cc4ff22, 0 20px 50px #000c;
+}
+/* 橫幅貼齊卡片邊緣 (抵銷卡片內距);登入時完整顯示,創角時只留上方標題那一條 */
+.auth-header { margin: calc(var(--au-pad-top) * -1) calc(var(--au-pad-x) * -1) 16px; }
+.auth-banner {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1200 / 630;
+    object-fit: cover;
+    object-position: 50% 0;
+    background: #0b0e18;
+    border-bottom: 1px solid var(--au-gold-lo);
+    transition: aspect-ratio .2s;
+}
+#authPanel[data-view="create"] .auth-banner { aspect-ratio: 1200 / 330; }
+.auth-header h2 {
+    margin: 14px var(--au-pad-x) 0;
+    color: var(--au-gold-hi);
+    font-family: Cinzel, Georgia, "Noto Serif CJK TC", serif;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: .1em;
+}
+
+.auth-view { display: grid; gap: 12px; }
+.auth-view[hidden] { display: none; }
+.auth-step { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.auth-step[hidden] { display: none; }
+.auth-step legend { margin: 0 0 4px; color: var(--au-gold-hi); font-size: 17px; font-weight: 700; }
+
+.auth-field { display: grid; gap: 6px; }
+.auth-field label,
+.auth-label { color: var(--au-text); font-size: 15px; font-weight: 700; }
+.auth-field input {
+    width: 100%;
+    min-height: 46px;
+    padding: 8px 12px;
+    color: var(--au-text);
+    font-size: 16px; /* iOS 不自動放大 */
+    background: var(--au-surface);
+    border: 1px solid var(--au-line);
+    border-radius: 10px;
+    transition: border-color .15s, box-shadow .15s;
+}
+.auth-field input:focus { outline: none; border-color: var(--au-accent); box-shadow: 0 0 0 3px var(--au-accent-glow); }
+.auth-field input[aria-invalid="true"] { border-color: var(--au-danger); }
+.auth-hint { min-height: 1.2em; margin: 0; color: var(--au-muted); font-size: 13px; line-height: 1.5; }
+.auth-hint:empty { min-height: 0; }
+.auth-hint.is-error { color: var(--au-danger); }
+.auth-hint.is-ok { color: var(--au-ok); }
+
+.auth-check { display: flex; align-items: center; gap: 10px; min-height: 44px; color: var(--au-text); font-size: 15px; cursor: pointer; }
+.auth-check input { width: 20px; height: 20px; accent-color: var(--au-gold); }
+
+.auth-error {
+    margin: 0;
+    padding: 8px 12px;
+    color: var(--au-danger);
+    font-size: 14px;
+    background: #3a161699;
+    border: 1px solid #7a2e2e;
+    border-radius: 8px;
+}
+.auth-error[hidden] { display: none; }
+/* 成功 / 說明訊息 (忘記密碼寄出後) */
+.auth-notice {
+    margin: 0;
+    padding: 8px 12px;
+    color: var(--au-ok);
+    font-size: 14px;
+    line-height: 1.6;
+    background: #16341f99;
+    border: 1px solid #2e6b3e;
+    border-radius: 8px;
+}
+.auth-notice[hidden] { display: none; }
+
+/* 按鈕 */
+.auth-primary,
+.auth-secondary {
+    min-height: 48px;
+    padding: 0 18px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: filter .15s, background-color .15s, border-color .15s;
+}
+.auth-primary {
+    color: #1a1406;
+    letter-spacing: .08em;
+    background: linear-gradient(180deg, var(--au-gold-hi), var(--au-gold));
+    border: 2px solid #fff3c9;
+    box-shadow: 0 0 14px #f3dc9b44;
+}
+.auth-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.auth-secondary { color: var(--au-text); background: transparent; border: 1px solid var(--au-gold-lo); }
+.auth-secondary:hover:not(:disabled) { background: #ffffff10; border-color: var(--au-gold); }
+.auth-link {
+    justify-self: center;
+    min-height: 44px;
+    padding: 0 8px;
+    color: var(--au-muted);
+    font-size: 14px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+.auth-link:hover:not(:disabled) { color: var(--au-text); }
+#authPanel button:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+#authPanel.is-busy .auth-primary:disabled { opacity: .8; cursor: progress; }
+
+/* 步驟指示 */
+.auth-steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 0 0 4px; padding: 0; list-style: none; counter-reset: auth-step; }
+.auth-steps li {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    color: var(--au-muted);
+    font-size: 13px;
+    counter-increment: auth-step;
+}
+.auth-steps li::before {
+    content: counter(auth-step);
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    font-family: Cinzel, Georgia, serif;
+    font-weight: 700;
+    background: var(--au-surface);
+    border: 1px solid var(--au-line);
+    border-radius: 50%;
+}
+.auth-steps li.is-done { color: var(--au-text); }
+.auth-steps li.is-done::before { content: "✓"; color: #1a1406; background: var(--au-gold); border-color: var(--au-gold); }
+.auth-steps li.is-current { color: var(--au-gold-hi); font-weight: 700; }
+.auth-steps li.is-current::before { color: var(--au-gold-hi); border: 2px solid var(--au-gold-hi); box-shadow: 0 0 10px #f3dc9b55; }
+
+/* 性別 / 職業選項:原生 radio 藏起來,整張卡片可點 */
+.auth-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.auth-choice,
+.auth-class { position: relative; cursor: pointer; }
+.auth-choice input,
+.auth-class input { position: absolute; opacity: 0; pointer-events: none; }
+.auth-choice span {
+    display: grid;
+    min-height: 46px;
+    place-items: center;
+    font-size: 16px;
+    background: var(--au-surface);
+    border: 1px solid var(--au-line);
+    border-radius: 10px;
+    transition: border-color .15s, background-color .15s;
+}
+.auth-classes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.auth-class {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    min-height: 88px;
+    padding: 10px 12px;
+    background: var(--au-surface);
+    border: 1px solid var(--au-line);
+    border-radius: 10px;
+    transition: border-color .15s, background-color .15s;
+}
+.auth-class strong { color: var(--au-text); font-size: 17px; }
+.auth-class span { color: var(--au-muted); font-size: 13px; line-height: 1.5; }
+.auth-choice:hover span,
+.auth-class:hover { border-color: var(--au-gold-lo); }
+.auth-choice input:checked + span,
+.auth-class:has(input:checked) { background: var(--au-surface-hi); border: 2px solid var(--au-gold-hi); box-shadow: 0 0 12px #f3dc9b33; }
+.auth-choice input:checked + span { color: var(--au-gold-hi); font-weight: 700; }
+.auth-class:has(input:checked) strong { color: var(--au-gold-hi); }
+.auth-choice input:focus-visible + span,
+.auth-class:has(input:focus-visible) { outline: 3px solid var(--au-accent); outline-offset: 2px; }
+
+/* 屬性分配 */
+.auth-points {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    color: var(--au-muted);
+    font-size: 15px;
+    background: var(--au-surface);
+    border: 1px solid var(--au-gold-lo);
+    border-radius: 10px;
+    box-shadow: inset 0 0 14px #00000088;
+}
+.auth-points strong { color: var(--au-gold-hi); font-family: Cinzel, Georgia, serif; font-size: 32px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+#authPanel.is-attr-complete .auth-points strong { color: var(--au-accent); text-shadow: 0 0 12px var(--au-accent-glow); }
+.auth-attr-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.auth-attr-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 3ch 44px 40px 44px;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px 6px 12px;
+    background: var(--au-surface);
+    border: 1px solid var(--au-line);
+    border-radius: 10px;
+}
+.auth-attr-row.has-add { background: var(--au-surface-hi); border-color: var(--au-gold); }
+.auth-attr-name { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.auth-attr-label { font-size: 17px; font-weight: 700; }
+.auth-attr-key { color: var(--au-muted); font-family: Cinzel, Georgia, serif; font-size: 13px; letter-spacing: .08em; }
+.auth-attr-value { font-size: 18px; font-variant-numeric: tabular-nums; text-align: right; }
+.auth-attr-row.has-add .auth-attr-value { color: var(--au-accent); }
+.auth-attr-add { color: var(--au-muted); font-family: Cinzel, Georgia, serif; font-size: 16px; font-variant-numeric: tabular-nums; text-align: center; }
+.auth-attr-row.has-add .auth-attr-add { color: var(--au-gold-hi); font-weight: 700; }
+.auth-attr-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: var(--au-text);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    background: #232a44;
+    border: 1px solid var(--au-gold-lo);
+    border-radius: 8px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform .08s, border-color .15s;
+}
+.auth-attr-btn.is-plus { color: #1a1406; background: linear-gradient(180deg, var(--au-gold-hi), var(--au-gold)); border-color: var(--au-gold-hi); }
+.auth-attr-btn:hover:not(:disabled) { border-color: var(--au-gold-hi); }
+.auth-attr-btn:active:not(:disabled) { transform: scale(.94); }
+#authPanel .auth-attr-btn:disabled { opacity: .38; }
+
+/* 確認摘要 */
+.auth-summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 6px 14px;
+    margin: 0;
+    padding: 12px 14px;
+    font-size: 15px;
+    background: var(--au-surface);
+    border: 1px solid var(--au-line);
+    border-radius: 10px;
+}
+.auth-summary dt { color: var(--au-muted); font-weight: 400; }
+.auth-summary dd { margin: 0; overflow-wrap: anywhere; }
+
+.auth-nav { display: grid; grid-template-columns: auto 1fr; gap: 10px; }
+.auth-nav .auth-primary:only-child,
+.auth-nav [hidden] + .auth-primary { grid-column: 1 / -1; }
+.auth-nav [hidden] { display: none; }
+
+#authPanel button:focus-visible,
+.auth-check input:focus-visible { outline: 3px solid var(--au-accent); outline-offset: 2px; }
+
+@media (max-width: 520px) {
+    #authPanel { padding: 0; }
+    .auth-card {
+        --au-pad-x: 16px;
+        --au-pad-top: 18px;
+        width: 100%;
+        margin: 0;
+        min-height: 100dvh;
+        padding-bottom: calc(18px + env(safe-area-inset-bottom));
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    .auth-header h2 { font-size: 22px; }
+    .auth-classes { grid-template-columns: 1fr; }
+    .auth-class { min-height: 0; }
+    .auth-attr-row { grid-template-columns: minmax(0, 1fr) 3ch 44px 32px 44px; gap: 6px; padding-left: 10px; }
+    .auth-attr-key { display: none; }
+}
+/* 矮螢幕 (手機橫放):橫幅再裁短,表單才不會被推到畫面外 */
+@media (max-height: 600px) {
+    .auth-banner { aspect-ratio: 1200 / 300; }
+    #authPanel[data-view="create"] .auth-banner { aspect-ratio: 1200 / 200; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #authPanel * { transition: none !important; }
+}

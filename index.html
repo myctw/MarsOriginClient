@@ -125,1202 +125,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        /* 註:Bootstrap 已提供 [hidden]{display:none!important},以下只處理會被 d-flex 等 !important 蓋掉的情況 */
-        :root { --right-panel-width: 400px; }
-        body {
-            background-color: black;
-            color: white;
-            height: 100vh;
-            /* iOS Safari/Chrome: 100vh 含瀏覽器工具列後方區域,改用動態視窗高度 */
-            height: 100dvh;
-            display: flex;
-            flex-direction: column;
-        }
-        .formatted-text { tab-size: 4; }
-        #output-container, #output-top, #output { background-color: black; }
-        #output-container {
-            flex: 1;
-            position: relative;
-            margin-right: var(--right-panel-width);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-        #output-top, #output {
-            padding: 12px;
-            line-height: 18px;
-            font-family: 'Consolas', 'Courier New', monospace;
-            white-space: pre;
-            overflow-y: auto;
-        }
-        #output-top {
-            flex: 0 0 auto;
-            max-height: 0;
-            opacity: 0;
-            transition: all 0.3s ease;
-            border-bottom: 1px solid transparent;
-        }
-        #output { flex: 1; }
-        .split-view #output-top {
-            max-height: 50%;
-            opacity: 1;
-            border-bottom: 1px solid #333;
-        }
-        /* output-top 未使用時完全收合 (覆蓋各主題的 padding / border) */
-        body #output-container:not(.split-view) #output-top {
-            padding-top: 0;
-            padding-bottom: 0;
-            border-width: 0;
-        }
-        #statusBar {
-            background-color: #1a1a1a;
-            padding: 1px 10px;
-            border-bottom: 1px solid #333;
-        }
-        .status-icon { margin-right: 5px; }
-        .status-effect { color: #666; transition: color 0.3s ease; }
-        .status-effect.poison.active { color: #00ff00; }
-        .status-effect.burn.active { color: #ff4500; }
-        .status-effect.bleed.active { color: #ff0000; }
-        .status-hp { color: #ff0000; }
-        .status-mana { color: #4169e1; }
-        .status-move, .status-gold { color: #ffd700; }
-        .status-level { color: #9370db; }
-        .status-combat-stat { color: #ff6347; }
-        .status-effects[hidden], .status-combat[hidden],
-        body.theme-dark-fantasy .status-effects[hidden],
-        body.theme-dark-fantasy .status-combat[hidden] {
-            display: none !important;
-        }
-        .fixed-width { font-family: monospace; display: inline-block; }
-        .bar-width { width: 5ch; }
-        .progress { height: 8px; margin: 1px 0; }
-        #targetInfoBar { font-size: 1.1em; background-color: #1a1a1a; }
-        #targetName, #targetHp, #targetTargetName, #targetTargetHp { font-size: calc(1em + 2px); }
-        #targetName, #targetHp { color: #ff4444; min-width: 90px; }
-        #targetTargetName, #targetTargetHp, .target-arrow-icon { color: #ffe066; }
-        .target-arrow-icon { font-size: 1.1em; }
-        #inputArea { position: relative; padding: 5px; background-color: black; }
-        #inputBox { background-color: white; color: black; }
-        #sendButton { min-width: 60px; }
-        #themeSelector { width: 42px; height: 38px; flex: 0 0 auto; }
-        .bottom-container {
-            /* left / width 由 JS 依 #output 位置同步 */
-            display: flex;
-            box-sizing: border-box;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            z-index: 1000;
-        }
-        .left-panel {
-            width: 50%;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-        }
-        #chatArea {
-            width: 50%;
-            background-color: #1a1a1a;
-            border-left: 1px solid #333;
-            overflow-y: auto;
-            padding: 10px;
-            font-family: 'Consolas', 'Courier New', monospace;
-            line-height: 0.4;
-        }
-        /* 懸浮按鈕 (活動傳送、互動):懸浮在 chatArea 正上方;位置由 JS 依 chatArea 實際位置計算 (makeFloatingButton) */
-        .float-button {
-            position: fixed;
-            width: 44px;
-            height: 44px;
-            padding: 6px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: grab;
-            touch-action: none;
-            user-select: none;
-            z-index: 1001;
-        }
-        .float-button[hidden] { display: none; }
-        .float-button:hover { filter: brightness(1.2); }
-        .interact-button {
-            border: 2px solid #ffffff;
-            background: #1a1a1acc;
-            color: #ffffff;
-            font-size: 12px;
-            line-height: 1;
-            padding: 0;
-            box-shadow: 0 0 8px #ffffff66;
-        }
-        /* 羊皮卷軸選單:房間 NPC / 玩家的點擊選單、多個可互動物件時 [互動] 按鈕的選單共用 (openActionMenu)
-           紙面 = 羊皮紙漸層 + 汙漬 + SVG 雜訊紋理,邊緣以內陰影燒焦;上下 ::before/::after 為捲軸木軸 */
-        .scroll-menu {
-            --parchment-ink: #3b2410;
-            --parchment-title: #4a1f0a;
-            --parchment-edge: #8a5a2b;
-            --parchment-danger: #8a1c12;
-            --parchment-hover: rgba(122, 74, 30, 0.16);
-            --parchment-press: rgba(122, 74, 30, 0.28);
-            position: fixed;
-            min-width: 168px;
-            max-width: min(300px, calc(100vw - 24px));
-            padding: 18px 12px;
-            color: var(--parchment-ink);
-            font-family: Georgia, 'Times New Roman', 'Noto Serif TC', 'PMingLiU', 'MingLiU', serif;
-            background:
-                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .22 0 0 0 0 .08 0 0 0 .28 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-                radial-gradient(circle at 18% 82%, rgba(150, 95, 40, 0.20), transparent 38%),
-                radial-gradient(circle at 86% 18%, rgba(150, 95, 40, 0.16), transparent 32%),
-                radial-gradient(ellipse at 50% 45%, #f6e7bf 0%, #ecd49c 55%, #d6ad66 100%);
-            border-left: 1px solid #b98a4a;
-            border-right: 1px solid #b98a4a;
-            box-shadow:
-                inset 0 0 18px rgba(110, 62, 18, 0.55),
-                inset 0 0 3px rgba(80, 40, 10, 0.6),
-                0 10px 24px rgba(0, 0, 0, 0.7);
-            line-height: 1.4;
-            z-index: 1002;
-            transform-origin: 50% 0;
-            animation: scroll-unfurl 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-        .scroll-menu[hidden] { display: none; }
-        .scroll-menu::before,
-        .scroll-menu::after {
-            content: '';
-            position: absolute;
-            left: -9px;
-            right: -9px;
-            height: 14px;
-            border-radius: 7px;
-            background:
-                radial-gradient(circle at 5px 50%, #2e1a08 3px, transparent 4px),
-                radial-gradient(circle at calc(100% - 5px) 50%, #2e1a08 3px, transparent 4px),
-                linear-gradient(to bottom, #e3b97f 0%, #a86f38 40%, #6e4119 75%, #4a2a10 100%);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.55);
-        }
-        .scroll-menu::before { top: -7px; }
-        .scroll-menu::after { bottom: -7px; }
-        .scroll-menu-title {
-            padding: 0 6px;
-            color: var(--parchment-title);
-            font-size: 15px;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .scroll-menu-title[hidden] { display: none; }
-        /* 標題下的分隔線:兩端淡出的墨線 + 中央菱形 */
-        .scroll-menu-divider {
-            position: relative;
-            height: 1px;
-            margin: 8px 10px 6px;
-            background: linear-gradient(90deg, transparent, var(--parchment-edge) 20%, var(--parchment-edge) 80%, transparent);
-        }
-        .scroll-menu-divider::after {
-            content: '';
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 7px;
-            height: 7px;
-            background: #f1ddaa;
-            border: 1px solid var(--parchment-edge);
-            transform: translate(-50%, -50%) rotate(45deg);
-        }
-        .scroll-menu-title[hidden] + .scroll-menu-divider { display: none; }
-        .scroll-menu-body {
-            max-height: 50vh;
-            overflow-y: auto;
-            overscroll-behavior: contain;
-        }
-        .scroll-menu-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-            min-height: 44px;
-            padding: 8px 12px;
-            border: 0;
-            border-radius: 4px;
-            background: transparent;
-            color: inherit;
-            font: inherit;
-            font-size: 15px;
-            text-align: left;
-            white-space: nowrap;
-            touch-action: manipulation;
-            transition: background-color 120ms ease-out;
-        }
-        .scroll-menu-item + .scroll-menu-item { margin-top: 2px; }
-        .scroll-menu-item > span { overflow: hidden; text-overflow: ellipsis; }
-        .scroll-menu-item svg { flex: 0 0 18px; width: 18px; height: 18px; }
-        .scroll-menu-item .scroll-menu-chevron { flex-basis: 14px; width: 14px; height: 14px; margin-left: auto; opacity: 0.7; }
-        .scroll-menu-item.is-back { color: #6b4420; font-size: 14px; }
-        .scroll-menu-note { padding: 10px 12px; color: #6b4420; font-size: 14px; font-style: italic; text-align: center; }
-        .scroll-menu .scroll-menu-item:hover { background: var(--parchment-hover); text-decoration: none; }
-        .scroll-menu-item:active { background: var(--parchment-press); }
-        .scroll-menu-item:focus-visible { outline: 2px solid var(--parchment-edge); outline-offset: -2px; }
-        .scroll-menu-item.is-danger { color: var(--parchment-danger); font-weight: 700; }
-        @keyframes scroll-unfurl {
-            from { opacity: 0; transform: scaleY(0.55); }
-            to { opacity: 1; transform: none; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .scroll-menu { animation: none; }
-        }
-        /* look 房間時 NPC / 其他玩家行尾的白色 [互動]:點擊跳出羊皮卷軸選單 */
-        .entity-link { cursor: pointer; }
-        .entity-link:hover { text-decoration: underline; }
-        .boss-event-button {
-            border: 2px solid #ffd54a;
-            background: #1a1a1acc;
-            box-shadow: 0 0 10px #ffd54a99;
-            animation: boss-event-pulse 1.6s ease-in-out infinite;
-        }
-        .boss-event-button img { width: 100%; height: 100%; object-fit: contain; }
-        @keyframes boss-event-pulse {
-            0%, 100% { box-shadow: 0 0 6px #ffd54a99; }
-            50% { box-shadow: 0 0 16px #ffd54a; }
-        }
-
-        /* ===== 設定面板 (羊皮紙卷軸,置中顯示、可由標題列拖移) ===== */
-        #settingsPanel {
-            position: fixed;
-            z-index: 1100;
-            width: min(460px, calc(100vw - 24px));
-            min-height: 540px;
-            max-height: calc(100vh - 16px);
-            overflow-y: auto;
-            padding: 28px 24px 24px;
-            color: #382719;
-            background:
-                radial-gradient(ellipse at 50% 0, #fff4ce99, transparent 70%),
-                repeating-linear-gradient(3deg, #ddc28c 0, #e8d5a9 2px, #dfc995 4px, #e8d5a9 7px);
-            box-shadow: 0 12px 32px #000b, inset 0 0 24px #90652c55;
-            font-family: Georgia, "Noto Serif CJK TC", serif;
-        }
-        #settingsPanel::before, #settingsPanel::after {
-            position: absolute;
-            right: 0;
-            left: 0;
-            height: 12px;
-            content: "";
-            background: linear-gradient(180deg, #8c6237, #d2b477 40%, #9a7045);
-            box-shadow: 0 2px 4px #432b1770;
-        }
-        #settingsPanel::before { top: 0; }
-        #settingsPanel::after { bottom: 0; }
-        .settings-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 48px;
-            margin: 0 0 14px;
-            padding-right: 42px;
-            cursor: move;
-            user-select: none;
-            touch-action: none;
-        }
-        #settingsPanel.is-macos .settings-header { padding: 0 0 0 56px; }
-        #settingsPanel h2 { margin: 0; color: #4a2d17; font-family: inherit; font-size: 22px; }
-        .settings-window-control {
-            position: absolute;
-            top: 17px;
-            right: 17px;
-            display: grid;
-            width: 25px;
-            height: 25px;
-            place-items: center;
-            padding: 0;
-            color: #382719;
-            border: 1px solid #8e6335;
-            border-radius: 50%;
-            background: linear-gradient(#f3dfb2, #c8a36a);
-            box-shadow: 0 1px 3px #442a1470;
-            line-height: 1;
-        }
-        #settingsPanel.is-macos .settings-window-control { right: auto; left: 17px; }
-        .settings-reset-button {
-            flex: 0 0 auto;
-            padding: 3px 10px;
-            color: #382719;
-            border: 1px solid #8e6335;
-            background: #e7d09e;
-            font-family: inherit;
-        }
-        #settingsPanel label, #settingsPanel legend { color: #382719; font-weight: 600; }
-        #settingsPanel .settings-option-row { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; }
-        #settingsPanel .settings-notification-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-        #settingsPanel .form-check-input { border-color: #8e6335; border-radius: 4px; }
-        #settingsPanel .form-control, #settingsPanel .form-select {
-            color: #2f2117;
-            border-color: #9c784a;
-            background-color: #f5e8c9dd;
-        }
-        #settingsPanel .form-control, #settingsPanel .form-select,
-        #settingsPanel .settings-reset-button, #settingsPanel fieldset {
-            border-radius: 6px;
-        }
-        #settingsPanel fieldset {
-            margin: 16px 0;
-            padding: 10px 12px 12px;
-            border: 1px solid #9c784a;
-            background: #f5e8c955;
-        }
-        #settingsPanel legend { float: none; width: auto; margin: 0; padding: 0 6px; font-size: 15px; }
-        #settingsPanel button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .status-options {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 8px 12px;
-        }
-        .status-options label {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            font-size: 14px;
-            font-weight: 400 !important;
-        }
-        .settings-credential-row {
-            display: grid;
-            grid-template-columns: 3.5em minmax(0, 1fr);
-            align-items: center;
-            gap: 8px;
-        }
-        .settings-credential-row + .settings-credential-row { margin-top: 8px; }
-        .settings-credential-row .form-label { margin: 0; }
-        #settingsPanel .settings-theme-row { margin-top: 12px; }
-        .redeem-code-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
-        .redeem-code-row label, .redeem-code-row button { flex: 0 0 auto; margin: 0; }
-        .redeem-code-row input { min-width: 0; }
-        /* 設定面板欄位高度縮小 (38px -> 30px),覆蓋主題樣式 */
-        #settingsPanel #savedAccount,
-        #settingsPanel #savedPassword,
-        #settingsPanel #themeColor,
-        #settingsPanel #redeemCodeInput,
-        #settingsPanel #redeemCodeButton {
-            height: 30px;
-            min-height: 30px;
-            padding-top: 2px;
-            padding-bottom: 2px;
-            line-height: 1.2;
-        }
-        #settingsPanel .account-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-        #settingsPanel .account-row label { flex: 0 0 auto; margin: 0; }
-        #settingsPanel .account-row .form-control { flex: 1 1 auto; min-width: 0; height: 30px; }
-        #settingsPanel .account-mail { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        #settingsPanel .account-mail-status { flex: 0 0 auto; font-size: 12px; }
-        #settingsPanel .account-danger { margin-top: 8px; color: #ff6b6b; border-color: #ff6b6b; }
-        #settingsError { margin-top: 8px; color: #8b1d1d; font-size: 13px; }
-        /* web view:角色資料放在設定面板右側 */
-        @media (min-width: 769px) {
-            #settingsPanel:has(#accountSection:not([hidden])) {
-                width: min(920px, calc(100vw - 24px));
-                display: grid;
-                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-                column-gap: 20px;
-                align-content: start;
-            }
-            #settingsPanel:has(#accountSection:not([hidden])) > * { grid-column: 1; }
-            #settingsPanel:has(#accountSection:not([hidden])) > .settings-header { grid-column: 1 / -1; }
-            #settingsPanel:has(#accountSection:not([hidden])) > #accountSection {
-                grid-column: 2;
-                grid-row: 2 / span 8;
-                margin-top: 0;
-            }
-        }
-        @media (max-width: 480px) {
-            #settingsPanel { width: calc(100vw - 16px); padding-right: 14px; padding-left: 14px; }
-            .status-options { gap: 8px 6px; }
-            .status-options label { gap: 4px; font-size: 12px; }
-        }
-
-        /* ===== 右側面板 (地圖 / 物品 / 裝備) ===== */
-        .right-panel {
-            position: fixed;
-            right: 0;
-            top: 0;
-            width: var(--right-panel-width);
-            box-sizing: border-box;
-            height: 100vh;
-            background-color: #1a1a1a;
-            padding: 10px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .equipment-panel, .inventory-panel {
-            background-color: #2a2a2a;
-            padding: 3px;
-            border-radius: 5px;
-            display: none;
-        }
-        .equipment-panel.active, .inventory-panel.active { display: block; }
-        .equipment-list, .inventory-list {
-            font-family: monospace;
-            white-space: pre-wrap;
-            line-height: 1.2;
-            height: calc(100vh - 520px);
-            min-height: 120px;
-            overflow-y: auto;
-        }
-        .tab-buttons { display: flex; gap: 10px; margin-bottom: 10px; }
-        .tab-btn {
-            flex: 1;
-            padding: 1px;
-            background-color: #3a3a3a;
-            border: none;
-            border-radius: 5px;
-            color: #fff;
-            cursor: pointer;
-            transition: background-color 0.8s;
-        }
-        .tab-btn:hover { background-color: #4a4a4a; }
-        .tab-btn.active { background-color: #5a5a5a; border-bottom: 4px solid #87ceeb; }
-        .item-link { cursor: pointer; }
-        .item-link:hover { text-decoration: underline; }
-
-        /* right-panel 左側寬度拖移控制 */
-        .right-panel-resizer {
-            position: fixed;
-            top: 0;
-            right: var(--right-panel-width);
-            width: 10px;
-            height: 100vh;
-            transform: translateX(50%);
-            cursor: col-resize;
-            z-index: 1002;
-            touch-action: none;
-        }
-        .right-panel-resizer::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 50%;
-            width: 2px;
-            transform: translateX(-50%);
-            background: transparent;
-            transition: background-color 0.15s;
-        }
-        .right-panel-resizer:hover::before,
-        body.is-resizing-right-panel .right-panel-resizer::before { background: #87ceeb; }
-        .right-panel-resizer::after {
-            content: "⇔ 按住左鍵拖移調整寬度";
-            position: absolute;
-            top: 50%;
-            right: calc(100% + 6px);
-            transform: translateY(-50%);
-            padding: 4px 8px;
-            white-space: nowrap;
-            font-size: 12px;
-            color: #fff;
-            background: #000c;
-            border: 1px solid #87ceeb;
-            border-radius: 4px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.15s;
-        }
-        .right-panel-resizer:hover::after { opacity: 1; }
-        body.is-resizing-right-panel .right-panel-resizer::after { opacity: 0; }
-        body.is-resizing-right-panel { cursor: col-resize; user-select: none; }
-
-        /* ===== 地圖 ===== */
-        .map-window {
-            display: flex;
-            flex-direction: column;
-            flex: 0 0 auto;
-            width: 100%;
-            max-height: 420px;
-            overflow: hidden;
-            color: #eadbb8;
-            border: 1px solid #806b43;
-            border-radius: 12px;
-            background: #17191e;
-            box-shadow: 0 16px 60px #000;
-        }
-        .map-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px;
-            border-bottom: 1px solid #443a29;
-            font-size: 1rem;
-        }
-        .map-toolbar { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
-        #mapTitle {
-            flex: 1 1 auto;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .map-toolbar button, #mapCollapse {
-            color: #eadbb8;
-            border: 1px solid #645438;
-            border-radius: 6px;
-            background: #24262b;
-            padding: 5px 8px;
-            white-space: nowrap;
-        }
-        .map-toolbar button.active { color: #17191e; background: #d3b36a; }
-        #mapCollapse { flex: 0 0 auto; }
-        .map-content { min-height: 0; padding: 8px; overflow: auto; }
-        .map-window.collapsed .map-content { display: none; }
-        #mapSvg {
-            display: block;
-            width: 100%;
-            height: 320px;
-            min-width: 0;
-            flex: 0 0 320px;
-            border: 1px solid #39352c;
-            border-radius: 8px;
-            background-color: #111318;
-            background-image: radial-gradient(#4b4230 1px, transparent 1px);
-            background-size: 24px 24px;
-        }
-        .map-link { stroke: #8d7951; stroke-width: 3; }
-        .map-link.vertical { stroke: #7196aa; stroke-dasharray: 8 6; }
-        .map-direction-label {
-            fill: #d7c18d;
-            font: 14px sans-serif;
-            paint-order: stroke;
-            stroke: #111318;
-            stroke-width: 4px;
-        }
-        .map-room-node { cursor: pointer; }
-        .map-room-node rect { fill: #292b30; stroke: #766442; stroke-width: 2; }
-        .map-room-node.current rect { fill: #514326; stroke: #e4c36e; stroke-width: 3; }
-        .map-room-node.neighbor:hover rect { fill: #3e4a4b; stroke: #a7d1d6; }
-        .map-room-node text { fill: #f0e6cf; font: 28px sans-serif; pointer-events: none; }
-        .map-room-node .map-vertical-indicators { fill: #8db9c9; font-size: 16px; }
-
-        /* ===== DOT 浮動傷害 ===== */
-        #dotFloatLayer {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: 20;
-        }
-        .dot-float {
-            position: absolute;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-weight: bold;
-            font-size: 1.1em;
-            text-shadow: 0 0 3px #000, 0 0 3px #000;
-            animation: dotFloatUp 1s ease-out forwards;
-            white-space: nowrap;
-        }
-        .dot-float img { width: 20px; height: 20px; border-radius: 3px; }
-        /* 浮動數值分三欄:玩家 DOT (左) / 玩家 HOT (右) / 目標 DOT。欄位在版面流中,彼此不會重疊 */
-        .float-row { position: absolute; display: flex; align-items: flex-end; gap: 8px; }
-        /* 玩家區:DOT 靠左、HOT 靠右,寬度至少等於玩家「名稱 (血量%)」的保留寬度 */
-        .float-self { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
-        .float-lane { display: flex; flex-direction: column; align-items: flex-start; }
-        .float-lane.hot { align-items: flex-end; }
-        .float-lane .dot-float { position: relative; }
-        .dot-float.heal { color: #66ff99; }
-        /* DOT 傷害數字一律紅色 (種類由圖示區分) */
-        .dot-float.bleed, .dot-float.burn, .dot-float.poison { color: #ff5555; }
-        @keyframes dotFloatUp {
-            0% { opacity: 0; transform: translateY(0); }
-            15%, 70% { opacity: 1; }
-            100% { opacity: 0; transform: translateY(-45px); }
-        }
-
-        /* ===== 九宮格方向按鈕 (只在 mobile 顯示) ===== */
-        .mobile-numpad {
-            display: none;
-            position: fixed;
-            top: 8px;
-            right: 8px;
-            opacity: 0.7;
-            z-index: 1001;
-        }
-        .numpad-row { display: flex; justify-content: flex-end; }
-        .numpad-btn {
-            width: 48px;
-            height: 48px;
-            font-size: 1.4rem;
-            font-weight: bold;
-            color: #ffffff3f;
-            background: #7660f51f;
-            border: none;
-            border-radius: 12px;
-            outline: none;
-            transition: background 0.2s;
-        }
-        .numpad-btn:active { background: rgba(0,0,0,0.2); }
-
-        /* ===== 響應式 ===== */
-        @media (max-width: 1400px) {
-            #output-container { margin-right: 0; }
-            .right-panel { display: none; }
-            .left-panel, #chatArea { flex: 1 1 50%; width: 50%; }
-        }
-        @media (max-width: 768px) {
-            .split-view #output-top { max-height: 0; opacity: 0; border-bottom: 1px solid transparent; }
-            body #output-container #output-top { padding-top: 0; padding-bottom: 0; border-width: 0; }
-            .mobile-numpad { display: block; }
-            .bottom-container { flex-direction: column; }
-            .left-panel { order: 1; flex: 0 0 auto; width: 100%; }
-            #chatArea {
-                order: 2;
-                flex: 0 0 auto;
-                width: 100%;
-                border-left: none;
-                border-top: 1px solid #333;
-            }
-            #targetInfoBar { display: none !important; }
-        }
-        @media (max-width: 576px) {
-            #statusBar { flex-wrap: nowrap !important; overflow-x: auto; }
-            .status-hp, .status-mana, .status-move { min-width: 0; flex: 1 1 0; }
-            .status-label { display: none !important; }
-            .map-header { gap: 5px; padding: 6px; font-size: .9rem; }
-            .map-toolbar { gap: 4px; }
-            .map-toolbar button, #mapCollapse { padding: 4px 5px; font-size: .8rem; }
-        }
-
-        /* ===== 奇幻主題 (theme-dark-fantasy) ===== */
-        body.theme-dark-fantasy {
-            --df-bg: #111318;
-            --df-surface: #181b21;
-            --df-panel: #20232b;
-            --df-elevated: #292d35;
-            --df-border: #49402f;
-            --df-border-soft: #332f28;
-            --df-text: #e6dfcf;
-            --df-secondary: #aaa393;
-            --df-muted: #777366;
-            --df-gold: #c5a15d;
-            --df-gold-highlight: #e0bd79;
-            --df-hp: #b94b4b;
-            --df-mana: #4778bd;
-            --df-move: #b58b43;
-            --df-success: #668b65;
-            --df-danger: #a94343;
-            --df-font-ui: "Segoe UI", "Noto Sans CJK TC", sans-serif;
-            --df-font-title: Georgia, "Noto Serif CJK TC", serif;
-            --df-font-game: "Noto Sans Mono CJK", "Cascadia Mono", Consolas, monospace;
-            background: var(--df-bg);
-            color: var(--df-text);
-            color-scheme: dark;
-            font-family: var(--df-font-ui);
-            font-size: 18px;
-            overflow: hidden;
-        }
-        body.theme-dark-fantasy .d-flex.flex-column.h-100 { min-height: 0; }
-        body.theme-dark-fantasy #output-container {
-            margin-right: var(--right-panel-width);
-            padding: 14px 16px 0;
-            background: var(--df-bg);
-            border-right: 1px solid var(--df-border-soft);
-        }
-        body.theme-dark-fantasy #output,
-        body.theme-dark-fantasy #output-top {
-            padding: 18px 22px;
-            background: var(--df-surface);
-            color: var(--df-text);
-            font-family: var(--df-font-game);
-            font-size: 16px;
-            line-height: 1.65;
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-            scrollbar-color: var(--df-border) var(--df-surface);
-        }
-        body.theme-dark-fantasy #output {
-            border: 1px solid var(--df-border-soft);
-            border-bottom: 0;
-            box-shadow: inset 0 1px 5px #0008;
-        }
-        body.theme-dark-fantasy #output-top {
-            color: var(--df-secondary);
-            border: 1px solid var(--df-border-soft);
-        }
-        body.theme-dark-fantasy .split-view #output-top { border-bottom-color: var(--df-border); }
-        body.theme-dark-fantasy .bottom-container {
-            gap: 8px;
-            padding: 0 0 12px;
-            align-items: stretch;
-            background: linear-gradient(180deg, transparent, var(--df-bg) 14px);
-        }
-        body.theme-dark-fantasy .left-panel,
-        body.theme-dark-fantasy #chatArea,
-        body.theme-dark-fantasy #statusBar,
-        body.theme-dark-fantasy #targetInfoBar,
-        body.theme-dark-fantasy #inputArea {
-            min-width: 0;
-            color: var(--df-text);
-            /* !important 也一併清掉 diablo 主題的 background-image,維持原本外觀 */
-            background: var(--df-panel) !important;
-            border: 1px solid var(--df-border);
-            box-shadow: inset 0 1px 0 #ffffff08, 0 4px 14px #0005;
-        }
-        body.theme-dark-fantasy #targetInfoBar {
-            min-height: 38px;
-            padding: 6px 12px;
-            gap: 5px;
-            font-family: var(--df-font-ui);
-            font-size: 14px;
-        }
-        body.theme-dark-fantasy #targetInfoBar .target-arrow-icon,
-        body.theme-dark-fantasy #targetTargetName,
-        body.theme-dark-fantasy #targetTargetHp { color: var(--df-gold-highlight); }
-        body.theme-dark-fantasy #targetName,
-        body.theme-dark-fantasy #targetHp { color: var(--df-hp); }
-        body.theme-dark-fantasy #statusBar {
-            gap: 8px 14px !important;
-            padding: 9px 12px;
-            border-top: 0;
-            flex: 1 1 auto;
-            align-content: center;
-        }
-        body.theme-dark-fantasy .status-hp,
-        body.theme-dark-fantasy .status-mana,
-        body.theme-dark-fantasy .status-move,
-        body.theme-dark-fantasy .status-level,
-        body.theme-dark-fantasy .status-gold,
-        body.theme-dark-fantasy .status-combat-stat {
-            color: var(--df-secondary);
-            align-items: center;
-            white-space: nowrap;
-            font-size: 14px;
-        }
-        body.theme-dark-fantasy .status-combat { display: flex !important; flex-wrap: wrap; }
-        body.theme-dark-fantasy .status-hp .status-icon { color: var(--df-hp); }
-        body.theme-dark-fantasy .status-mana .status-icon { color: var(--df-mana); }
-        body.theme-dark-fantasy .status-move .status-icon { color: var(--df-move); }
-        body.theme-dark-fantasy .status-level .status-icon,
-        body.theme-dark-fantasy .status-gold .status-icon { color: var(--df-gold); }
-        body.theme-dark-fantasy .status-combat-stat .status-icon { color: var(--df-gold-highlight); }
-        body.theme-dark-fantasy .fixed-width {
-            color: var(--df-text);
-            font-family: var(--df-font-game);
-            font-variant-numeric: tabular-nums;
-        }
-        body.theme-dark-fantasy .progress {
-            height: 5px;
-            margin: 4px 0 0;
-            overflow: hidden;
-            background: var(--df-bg);
-            border: 1px solid var(--df-border-soft);
-        }
-        body.theme-dark-fantasy .status-hp .progress-bar { background-color: var(--df-hp) !important; }
-        body.theme-dark-fantasy .status-mana .progress-bar { background-color: var(--df-mana) !important; }
-        body.theme-dark-fantasy .status-move .progress-bar { background-color: var(--df-move) !important; }
-        body.theme-dark-fantasy .status-effect {
-            padding: 3px 7px;
-            color: var(--df-muted);
-            background: var(--df-bg);
-            border: 1px solid var(--df-border-soft);
-            font-size: 13px;
-            white-space: nowrap;
-        }
-        body.theme-dark-fantasy .status-effect.poison.active {
-            color: var(--df-success);
-            border-color: var(--df-success);
-        }
-        body.theme-dark-fantasy .status-effect.burn.active,
-        body.theme-dark-fantasy .status-effect.bleed.active {
-            color: var(--df-hp);
-            border-color: var(--df-danger);
-        }
-        body.theme-dark-fantasy #inputArea { gap: 8px !important; padding: 8px; border-top: 0; }
-        body.theme-dark-fantasy #inputBox,
-        body.theme-dark-fantasy #themeColor {
-            min-height: 38px;
-            color: var(--df-text);
-            background-color: var(--df-bg);
-            border: 1px solid var(--df-border);
-            border-radius: 2px;
-            font-family: var(--df-font-game);
-            font-size: 18px;
-            box-shadow: inset 0 1px 4px #0008;
-        }
-        body.theme-dark-fantasy #inputBox::placeholder { color: var(--df-muted); }
-        body.theme-dark-fantasy #inputBox:focus,
-        body.theme-dark-fantasy #themeColor:focus {
-            border-color: var(--df-gold);
-            box-shadow: 0 0 0 2px #c5a15d33, inset 0 1px 4px #0008;
-        }
-        body.theme-dark-fantasy #themeSelector {
-            color: var(--df-text);
-            background: var(--df-elevated);
-            border-color: var(--df-border);
-        }
-        body.theme-dark-fantasy .btn,
-        body.theme-dark-fantasy .tab-btn,
-        body.theme-dark-fantasy .numpad-btn {
-            color: var(--df-text);
-            background: var(--df-elevated);
-            border: 1px solid var(--df-border);
-            border-radius: 2px;
-            font-family: var(--df-font-ui);
-            font-size: 18px;
-            transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
-        }
-        body.theme-dark-fantasy #sendButton {
-            min-height: 38px;
-            color: #17140e;
-            background: var(--df-gold);
-            border-color: var(--df-gold-highlight);
-            font-size: 16px;
-            font-weight: 700;
-        }
-        body.theme-dark-fantasy #sendButton:hover,
-        body.theme-dark-fantasy #sendButton:focus-visible { background: var(--df-gold-highlight); }
-        body.theme-dark-fantasy .btn:hover,
-        body.theme-dark-fantasy .tab-btn:hover,
-        body.theme-dark-fantasy .numpad-btn:hover {
-            color: var(--df-gold-highlight);
-            background: #34332f;
-            border-color: var(--df-gold);
-        }
-        body.theme-dark-fantasy .btn:active,
-        body.theme-dark-fantasy .tab-btn:active,
-        body.theme-dark-fantasy .numpad-btn:active {
-            background: #121419;
-            box-shadow: inset 0 2px 5px #0009;
-        }
-        body.theme-dark-fantasy .btn:disabled,
-        body.theme-dark-fantasy .tab-btn:disabled,
-        body.theme-dark-fantasy .numpad-btn:disabled {
-            color: var(--df-muted);
-            background: var(--df-surface);
-            border-color: var(--df-border-soft);
-            cursor: not-allowed;
-        }
-        body.theme-dark-fantasy :focus-visible { outline: 2px solid var(--df-gold-highlight); outline-offset: 2px; }
-        body.theme-dark-fantasy #chatArea {
-            padding: 12px;
-            color: var(--df-secondary);
-            font-family: var(--df-font-game);
-            font-size: 14px;
-            line-height: 1.5;
-            overflow-wrap: anywhere;
-            scrollbar-color: var(--df-border) var(--df-panel);
-        }
-        body.theme-dark-fantasy #chatArea p {
-            margin: 0 0 8px;
-            padding-left: 9px;
-            border-left: 2px solid var(--df-border);
-        }
-        body.theme-dark-fantasy .right-panel {
-            display: flex;
-            gap: 10px;
-            padding: 14px;
-            color: var(--df-text);
-            background: var(--df-surface);
-            border-left: 1px solid var(--df-border);
-            box-shadow: -8px 0 24px #0005;
-        }
-        body.theme-dark-fantasy .tab-buttons {
-            gap: 6px;
-            margin: 0;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--df-border);
-        }
-        body.theme-dark-fantasy .tab-btn {
-            min-height: 38px;
-            color: var(--df-secondary);
-            background: var(--df-panel);
-            font-family: var(--df-font-title);
-            font-size: 16px;
-        }
-        body.theme-dark-fantasy .tab-btn.active {
-            color: var(--df-gold-highlight);
-            background: var(--df-elevated);
-            border-color: var(--df-gold);
-            border-bottom: 2px solid var(--df-gold);
-        }
-        body.theme-dark-fantasy .equipment-panel,
-        body.theme-dark-fantasy .inventory-panel {
-            padding: 8px;
-            background: var(--df-panel);
-            border: 1px solid var(--df-border-soft);
-            border-radius: 0;
-        }
-        body.theme-dark-fantasy .equipment-list,
-        body.theme-dark-fantasy .inventory-list {
-            height: calc(100vh - 105px);
-            padding: 8px;
-            color: var(--df-text);
-            font-family: var(--df-font-game);
-            font-size: 14px;
-            line-height: 1.65;
-            overflow-wrap: anywhere;
-            scrollbar-color: var(--df-border) var(--df-panel);
-        }
-        body.theme-dark-fantasy .mobile-numpad {
-            opacity: 1;
-            padding: 5px;
-            background: #181b21d9;
-            border: 1px solid var(--df-border);
-        }
-        body.theme-dark-fantasy .numpad-row { gap: 3px; }
-        body.theme-dark-fantasy .numpad-btn {
-            width: 42px;
-            height: 42px;
-            color: var(--df-gold-highlight);
-            background: #20232bdd;
-            font-size: 16px;
-        }
-        body.theme-dark-fantasy #fleeBtn { color: #f0d7d0; border-color: var(--df-danger); }
-        body.theme-dark-fantasy #invbtn { color: var(--df-gold-highlight); }
-        body.theme-dark-fantasy ::selection { color: var(--df-bg); background: var(--df-gold); }
-        body.theme-dark-fantasy ::-webkit-scrollbar { width: 10px; height: 10px; }
-        body.theme-dark-fantasy ::-webkit-scrollbar-track { background: var(--df-bg); }
-        body.theme-dark-fantasy ::-webkit-scrollbar-thumb { background: var(--df-border); border: 2px solid var(--df-bg); }
-        body.theme-dark-fantasy .right-panel-resizer:hover::before,
-        body.theme-dark-fantasy.is-resizing-right-panel .right-panel-resizer::before { background: var(--df-gold); }
-        body.theme-dark-fantasy .right-panel-resizer::after { border-color: var(--df-gold); }
-        @media (max-width: 1100px) {
-            body.theme-dark-fantasy #output-container { margin-right: 0; }
-            body.theme-dark-fantasy .right-panel { display: none; }
-        }
-        @media (max-width: 768px) {
-            body.theme-dark-fantasy #output-container { padding: 8px 8px 0; }
-            body.theme-dark-fantasy #output,
-            body.theme-dark-fantasy #output-top { padding: 12px; font-size: 15px; }
-            body.theme-dark-fantasy .bottom-container { gap: 6px; padding: 0 0 8px; }
-            body.theme-dark-fantasy #statusBar { gap: 7px 10px !important; padding: 8px; flex-wrap: wrap !important; }
-            body.theme-dark-fantasy .status-effects { display: flex !important; flex-wrap: wrap; gap: 4px !important; }
-            body.theme-dark-fantasy .status-label { display: inline !important; }
-            body.theme-dark-fantasy #inputArea { flex-wrap: wrap; }
-            body.theme-dark-fantasy #inputBox { flex: 1 1 45%; }
-        }
-        @media (max-width: 420px) {
-            body.theme-dark-fantasy .status-hp,
-            body.theme-dark-fantasy .status-mana,
-            body.theme-dark-fantasy .status-move { flex: 1 1 30%; }
-        }
-
-        /* ===== 暗黑破壞神主題 (theme-diablo) =====
-           疊加在 theme-dark-fantasy 之上: 版面沿用 dark-fantasy,
-           這裡只覆寫 --df-* 色票/字型,並加上鐵框、金邊、血紅等裝飾。 */
-        body.theme-diablo {
-            --df-bg: #0b0807;
-            --df-surface: #130e0c;
-            --df-panel: #1b1411;
-            --df-elevated: #2a1d17;
-            --df-border: #5a4426;
-            --df-border-soft: #2e2218;
-            --df-text: #d6c9ae;
-            --df-secondary: #a39880;
-            --df-muted: #8d826c;
-            --df-gold: #c9a85c;
-            --df-gold-highlight: #e6c987;
-            --df-hp: #e2574f;
-            --df-mana: #5b86e0;
-            --df-move: #c28a3a;
-            --df-success: #6fae52;
-            --df-danger: #a3231b;
-            --d2-blood: #7a1712;
-            --d2-blood-hot: #a31d15;
-            --d2-iron: #3a3027;
-            --d2-gold-dim: #8a6d3b;
-            --df-font-ui: "Cinzel", "Palatino Linotype", "Book Antiqua", "Noto Serif CJK TC", "PMingLiU", serif;
-            --df-font-title: "Cinzel", "Palatino Linotype", "Book Antiqua", "Noto Serif CJK TC", serif;
-            background:
-                radial-gradient(ellipse at 50% -10%, #3a120c55 0, transparent 55%),
-                radial-gradient(ellipse at 50% 120%, #00000099 0, transparent 60%),
-                var(--df-bg);
-        }
-        body.theme-diablo .left-panel,
-        body.theme-diablo #chatArea,
-        body.theme-diablo #statusBar,
-        body.theme-diablo #targetInfoBar,
-        body.theme-diablo #inputArea,
-        body.theme-diablo .equipment-panel,
-        body.theme-diablo .inventory-panel {
-            border-color: var(--d2-iron);
-            background-image: linear-gradient(180deg, #ffffff06, transparent 30%, #00000040);
-            box-shadow:
-                inset 0 0 0 1px #00000099,
-                inset 0 0 0 2px #8a6d3b33,
-                inset 0 8px 18px #00000066,
-                0 4px 14px #000a;
-        }
-        body.theme-diablo #output,
-        body.theme-diablo #output-top {
-            background:
-                radial-gradient(ellipse at 50% 0, #2a110b33, transparent 70%),
-                var(--df-surface);
-            border-color: var(--d2-iron);
-            box-shadow: inset 0 0 0 1px #000, inset 0 0 22px #000b;
-        }
-        body.theme-diablo .right-panel {
-            border-left: 2px solid var(--d2-iron);
-            box-shadow: -1px 0 0 #000, -9px 0 24px #000a, inset 1px 0 0 #8a6d3b44;
-        }
-        body.theme-diablo #inputBox,
-        body.theme-diablo #themeColor {
-            border: 1px solid var(--d2-gold-dim);
-            background-color: #070504;
-            box-shadow: inset 0 2px 7px #000;
-        }
-        body.theme-diablo #inputBox:focus,
-        body.theme-diablo #themeColor:focus {
-            border-color: var(--df-gold-highlight);
-            box-shadow: 0 0 0 2px #c9a85c40, 0 0 12px #c9a85c33, inset 0 2px 7px #000;
-        }
-        body.theme-diablo .btn,
-        body.theme-diablo .tab-btn,
-        body.theme-diablo .numpad-btn,
-        body.theme-diablo #themeSelector,
-        body.theme-diablo .map-toolbar button,
-        body.theme-diablo #mapCollapse,
-        body.theme-diablo .settings-window-control,
-        body.theme-diablo .settings-reset-button {
-            color: var(--df-gold);
-            background: linear-gradient(180deg, #33261e, #1a120e);
-            border-color: var(--d2-gold-dim);
-        }
-        body.theme-diablo .btn,
-        body.theme-diablo .tab-btn,
-        body.theme-diablo .numpad-btn,
-        body.theme-diablo #themeSelector {
-            border: 1px solid var(--d2-gold-dim);
-            box-shadow: inset 0 1px 0 #ffffff10, inset 0 -2px 4px #0008;
-            text-shadow: 0 1px 2px #000;
-        }
-        body.theme-diablo .settings-window-control,
-        body.theme-diablo .settings-reset-button { box-shadow: inset 0 1px 0 #ffffff10; }
-        body.theme-diablo .btn:hover,
-        body.theme-diablo .tab-btn:hover,
-        body.theme-diablo .numpad-btn:hover,
-        body.theme-diablo #themeSelector:hover,
-        body.theme-diablo .settings-window-control:hover,
-        body.theme-diablo .settings-reset-button:hover,
-        body.theme-diablo .map-toolbar button.active {
-            color: #fff1d0;
-            background: linear-gradient(180deg, var(--d2-blood-hot), var(--d2-blood));
-        }
-        body.theme-diablo .btn:hover,
-        body.theme-diablo .tab-btn:hover,
-        body.theme-diablo .numpad-btn:hover,
-        body.theme-diablo #themeSelector:hover { border-color: var(--df-gold-highlight); }
-        body.theme-diablo .map-toolbar button.active { border-color: var(--df-gold); }
-        body.theme-diablo .btn:active,
-        body.theme-diablo .tab-btn:active,
-        body.theme-diablo .numpad-btn:active {
-            background: linear-gradient(180deg, #4a0d09, #240504);
-            box-shadow: inset 0 3px 8px #000;
-        }
-        body.theme-diablo #sendButton {
-            color: #f3e3c3;
-            background: linear-gradient(180deg, var(--d2-blood-hot), #5c0f0b);
-            border: 1px solid var(--df-gold);
-            text-shadow: 0 1px 2px #000;
-            letter-spacing: 0.08em;
-        }
-        body.theme-diablo #sendButton:hover,
-        body.theme-diablo #sendButton:focus-visible {
-            color: #fff1d0;
-            background: linear-gradient(180deg, #c42319, #7a1712);
-            box-shadow: 0 0 12px #a31d1566, inset 0 1px 0 #ffffff22;
-        }
-        body.theme-diablo .tab-btn.active {
-            color: var(--df-gold-highlight);
-            background: linear-gradient(180deg, #4a1a12, #230b08);
-            border-color: var(--df-gold);
-            border-bottom: 2px solid var(--d2-blood-hot);
-        }
-        body.theme-diablo #fleeBtn { color: #f2c9c2; border-color: var(--d2-blood-hot); }
-        body.theme-diablo .progress {
-            height: 7px;
-            background: #050302;
-            border: 1px solid #000;
-            box-shadow: 0 0 0 1px var(--d2-iron), inset 0 1px 3px #000;
-        }
-        body.theme-diablo .status-hp .progress-bar {
-            background-image: linear-gradient(180deg, #e0463d, #8c150f) !important;
-            background-color: #b8201c !important;
-            box-shadow: 0 0 6px #b8201c88;
-        }
-        body.theme-diablo .status-mana .progress-bar {
-            background-image: linear-gradient(180deg, #5b86e0, #1f3f93) !important;
-            background-color: #2c58c4 !important;
-            box-shadow: 0 0 6px #2c58c488;
-        }
-        body.theme-diablo .status-move .progress-bar {
-            background-image: linear-gradient(180deg, #d9a042, #7d5316) !important;
-            background-color: #a8742a !important;
-        }
-        body.theme-diablo .status-effect { background: #070504; border-color: var(--d2-iron); }
-        body.theme-diablo .tab-btn,
-        body.theme-diablo .settings-header h2,
-        body.theme-diablo #mapTitle {
-            font-family: var(--df-font-title);
-            letter-spacing: 0.06em;
-            text-shadow: 0 1px 3px #000;
-        }
-        body.theme-diablo #targetName,
-        body.theme-diablo #targetHp { text-shadow: 0 0 8px #a31d1566; }
-        body.theme-diablo ::selection { color: #fff1d0; background: var(--d2-blood-hot); }
-        body.theme-diablo ::-webkit-scrollbar-track { background: #070504; }
-        body.theme-diablo ::-webkit-scrollbar-thumb {
-            background: linear-gradient(90deg, #3a3027, #5a4426);
-            border: 2px solid #070504;
-        }
-        body.theme-diablo #output,
-        body.theme-diablo #output-top,
-        body.theme-diablo #chatArea,
-        body.theme-diablo .equipment-list,
-        body.theme-diablo .inventory-list { scrollbar-color: #5a4426 #070504; }
-        body.theme-diablo .mobile-numpad { background: #0b0807e6; border-color: var(--d2-gold-dim); }
-        /* 設定面板: 預設是羊皮紙卷軸,D2 主題改成黑鐵皮革 + 金邊 */
-        body.theme-diablo #settingsPanel {
-            color: var(--df-text);
-            background:
-                radial-gradient(ellipse at 50% 0, #3a120c66, transparent 70%),
-                repeating-linear-gradient(3deg, #1b1411 0, #211814 2px, #1b1411 5px);
-            border: 1px solid var(--d2-gold-dim);
-            box-shadow: 0 14px 38px #000, inset 0 0 0 1px #000, inset 0 0 0 2px #8a6d3b44, inset 0 0 40px #000a;
-            font-family: var(--df-font-title);
-        }
-        body.theme-diablo #settingsPanel::before,
-        body.theme-diablo #settingsPanel::after {
-            background: linear-gradient(180deg, #2a1f18, var(--d2-gold-dim) 45%, #2a1f18);
-            box-shadow: 0 2px 4px #000a;
-        }
-        body.theme-diablo #settingsPanel h2 { color: var(--df-gold-highlight); }
-        body.theme-diablo #settingsPanel label,
-        body.theme-diablo #settingsPanel legend { color: var(--df-gold); }
-        body.theme-diablo #settingsPanel .form-control,
-        body.theme-diablo #settingsPanel .form-select,
-        body.theme-diablo #settingsPanel #savedAccount,
-        body.theme-diablo #settingsPanel #savedPassword,
-        body.theme-diablo #settingsPanel #redeemCodeInput {
-            color: var(--df-text);
-            border-color: var(--d2-gold-dim);
-            background-color: #070504;
-        }
-        body.theme-diablo #settingsPanel fieldset { border-color: var(--d2-iron); background: #00000033; }
-        body.theme-diablo #settingsPanel .form-check-input { border-color: var(--d2-gold-dim); background-color: #070504; }
-        body.theme-diablo #settingsPanel .form-check-input:checked {
-            background-color: var(--d2-blood-hot);
-            border-color: var(--df-gold);
-        }
-    </style>
+    <!-- 樣式與程式在 assets/css、assets/js;部署網頁時要一起上傳。
+         修改這些檔案後請更新 ?v= 版本號,避免 Cloudflare / 瀏覽器快取到舊檔 -->
+    <link rel="stylesheet" href="./assets/css/game.css?v=20261122g">
+    <link rel="stylesheet" href="./assets/css/theme-dark-fantasy.css?v=20261121">
+    <link rel="stylesheet" href="./assets/css/theme-diablo.css?v=20261122">
+    <link rel="stylesheet" href="./assets/css/casino.css?v=20261121b">
+    <link rel="stylesheet" href="./assets/css/hero.css?v=20261121">
+    <link rel="stylesheet" href="./assets/css/areamap.css?v=20261122">
+    <link rel="stylesheet" href="./assets/css/auth.css?v=20261122c">
 </head>
 <body class="container-fluid p-0">
     <!-- SEO / AI SEO: 不執行 JavaScript 的爬蟲 (多數 AI 爬蟲) 會讀到這段遊戲介紹;一般玩家不會看到 -->
@@ -1359,7 +172,7 @@
                 </div>
             </div>
         </div>
-        <!-- 九宮格方向按鈕 (只在 mobile 顯示) -->
+        <!-- 九宮格方向按鈕 (只在 mobile 顯示):預設在右上角,整組可拖曳 (game.js makeDraggable) -->
         <div class="mobile-numpad">
             <div class="numpad-row">
                 <button class="numpad-btn" id="fleeBtn" data-cmd="flee">逃</button>
@@ -1439,13 +252,10 @@
                         </div>
                         <fieldset>
                             <legend>自動登入</legend>
+                            <!-- 在登入畫面勾選「記住我」後自動登入;這裡只顯示與清除 -->
                             <div class="settings-credential-row">
-                                <label class="form-label" for="savedAccount">帳號</label>
-                                <input id="savedAccount" class="form-control" type="text" autocomplete="username" maxlength="10">
-                            </div>
-                            <div class="settings-credential-row">
-                                <label class="form-label" for="savedPassword">密碼</label>
-                                <input id="savedPassword" class="form-control" type="password" autocomplete="current-password" maxlength="10">
+                                <span id="savedAccountLabel">尚未記住帳號 (在登入畫面勾選「記住我」)</span>
+                                <button id="forgetAccount" class="btn btn-sm btn-outline-light" type="button" hidden>忘記帳號</button>
                             </div>
                         </fieldset>
                         <div class="settings-option-row">
@@ -1495,9 +305,26 @@
                                 <span id="mailStatus" class="account-mail-status"></span>
                             </div>
                             <div id="verifyRow" class="account-row">
-                                <input id="verifyCodeInput" class="form-control" type="text" maxlength="32" autocomplete="off" placeholder="驗證碼">
-                                <button id="sendVerifyMailButton" class="settings-reset-button" type="button" disabled title="暫未開放">發送驗證信</button>
-                                <button id="submitVerifyCodeButton" class="settings-reset-button" type="button" disabled title="暫未開放">送出檢驗</button>
+                                <input id="verifyCodeInput" class="form-control" type="text" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="6 位數驗證碼" aria-label="信箱驗證碼">
+                                <button id="sendVerifyMailButton" class="settings-reset-button" type="button" title="寄 6 位數驗證碼到你的信箱 (15 分鐘內有效)">發送驗證信</button>
+                                <button id="submitVerifyCodeButton" class="settings-reset-button" type="button">送出檢驗</button>
+                            </div>
+                            <!-- 修改密碼 (信箱驗證後才顯示):輸入新密碼 → 寄 6 位數驗證碼 → 輸入驗證碼完成。走結構化訊息,密碼不會回顯在畫面上 -->
+                            <div id="passwordChangeSection" class="password-change" hidden>
+                                <div class="account-row">
+                                    <label for="newPasswordInput">新密碼</label>
+                                    <input id="newPasswordInput" class="form-control" type="password" maxlength="10" autocomplete="new-password" aria-describedby="passwordChangeStatus">
+                                </div>
+                                <div class="account-row">
+                                    <label for="confirmPasswordInput">再輸入一次</label>
+                                    <input id="confirmPasswordInput" class="form-control" type="password" maxlength="10" autocomplete="new-password" aria-describedby="passwordChangeStatus">
+                                    <button id="requestPasswordChangeButton" class="settings-reset-button" type="button">寄送驗證碼</button>
+                                </div>
+                                <div class="account-row">
+                                    <input id="passwordChangeCodeInput" class="form-control" type="text" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="6 位數驗證碼" aria-label="修改密碼驗證碼" aria-describedby="passwordChangeStatus">
+                                    <button id="confirmPasswordChangeButton" class="settings-reset-button" type="button">確認修改</button>
+                                </div>
+                                <p id="passwordChangeStatus" class="password-change-status" role="status" aria-live="polite"></p>
                             </div>
                             <div id="configToggles" class="status-options"></div>
                             <button id="deleteCharacterButton" class="settings-reset-button account-danger" type="button">刪除角色</button>
@@ -1547,1749 +374,274 @@
         </div>
     </div>
 
-    <script>
-        const $ = id => document.getElementById(id);
-
-        // 優先順序: 本機才允許 ?server=ws://host:port  >  本機用開發機  >  正式機
-        // 正式站不接受 ?server= 覆寫,避免釣魚伺服器透過連結竊取自動登入的帳密
-        const SERVER_URL = (() => {
-            const host = location.hostname;
-            const isLocal = location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1';
-            if (isLocal) {
-                const override = new URLSearchParams(location.search).get('server');
-                if (override && /^wss?:\/\/[\w.\-]+(:\d+)?$/.test(override)) return override;
-            }
-            return isLocal ? 'ws://localhost:9999' : 'wss://wssmo.myctw.cc:443';
-        })();
-        const outputContainer = $('output-container');
-        const outputTop = $('output-top');
-        const outputDiv = $('output');
-        const inputBox = $('inputBox');
-        const chatArea = $('chatArea');
-        const bossEventButton = $('bossEventButton');
-        const interactButton = $('interactButton');
-        const actionMenu = $('actionMenu');
-        const actionMenuTitle = $('actionMenuTitle');
-        const actionMenuBody = $('actionMenuBody');
-        // 目前開啟選單的元素 ([互動] 按鈕或 .entity-link) 與取得錨點位置的函式;放在這裡宣告,避免版面初始化時讀到 TDZ
-        let actionMenuOwner = null;
-        let actionMenuAnchor = null;
-        const MAX_CHAT_LINES = 7;
-        const MAX_OUTPUT_LINES = 200;
-        const MAX_COMMAND_HISTORY = 10;
-        const IDLE_LOGOUT_MS = 300000;
-        const RECONNECT_MS = 10000;
-        const MOBILE_QUERY = '(max-width: 768px)';
-
-        let ws;
-        let inputMode = null;
-        let autoLoginStage = 'account';
-        let isPasswordInput = false;
-        let inactivityTimer;
-        let reconnectTimer = null;
-        const commandHistory = [];
-        let currentHistoryIndex = -1;
-
-        const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-        const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESC[c]);
-
-        const isMobileLayout = () => window.matchMedia(MOBILE_QUERY).matches;
-        // 回傳給 server 的顯示模式,依視窗寬度判斷 (與 mobile layout 斷點一致)
-        const getClientView = () => isMobileLayout() ? 'mobile' : 'web';
-        const isOpen = () => ws && ws.readyState === WebSocket.OPEN;
-        const scrollOutputToBottom = () => { outputDiv.scrollTop = outputDiv.scrollHeight; };
-
-        // 讓元素可用滑鼠點擊或 Enter / 空白鍵觸發
-        function makeActivatable(element, label, action) {
-            element.setAttribute('role', 'button');
-            element.setAttribute('tabindex', '0');
-            element.setAttribute('aria-label', label);
-            element.addEventListener('click', action);
-            element.addEventListener('keydown', event => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    action();
-                }
-            });
-        }
-
-        // ---- 連線診斷:回報給 server 的 db/log/conn_diag 日誌 ----
-        const DIAG_PING_MS = 30000;
-        const diag = {
-            sessionId: Math.random().toString(36).slice(2, 10) + Date.now().toString(36),
-            events: [], socket: null, openedAt: 0, lastServerMsgAt: 0,
-            rtt: { min: null, max: null, sum: 0, n: 0, last: null },
-            seq: 0, sent: {}, timer: null, hiddenSince: null, hiddenTotalMs: 0
-        };
-        const storageGet = key => { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } };
-        const storageSet = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* ignore */ } };
-
-        function diagNetInfo() {
-            const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-            return c ? { et: c.effectiveType, dl: c.downlink, nrtt: c.rtt, nt: c.type, sd: c.saveData } : null;
-        }
-
-        function diagEvent(type, x) {
-            diag.events.push({
-                t: Date.now(), type, vis: document.visibilityState, online: navigator.onLine,
-                x: x === undefined ? undefined : String(x).slice(0, 60)
-            });
-            if (diag.events.length > 40) diag.events.shift();
-        }
-
-        function diagSaveReport(event, source) {
-            const now = Date.now();
-            const r = diag.rtt;
-            storageSet('marsDiagReport', {
-                closeSource: source || (diag.socket && diag.socket.__closeSource) || 'remote_or_network',
-                code: event ? event.code : null,
-                reason: event ? event.reason : null,
-                wasClean: event ? event.wasClean : null,
-                closedAt: now,
-                connDurationMs: diag.openedAt ? now - diag.openedAt : null,
-                lastServerMsgAgoMs: diag.lastServerMsgAt ? now - diag.lastServerMsgAt : null,
-                vis: document.visibilityState,
-                online: navigator.onLine,
-                net: diagNetInfo(),
-                hiddenTotalMs: diag.hiddenTotalMs + (diag.hiddenSince ? now - diag.hiddenSince : 0),
-                rtt: r.n ? { min: r.min, max: r.max, avg: Math.round(r.sum / r.n), n: r.n, last: r.last } : null,
-                pendingPings: Object.keys(diag.sent).length,
-                events: diag.events.slice(-30)
-            });
-        }
-
-        function diagSendPing(socket, drift) {
-            if (socket !== ws || !isOpen()) return;
-            const id = ++diag.seq;
-            const now = Date.now();
-            diag.sent[id] = now;
-            const keys = Object.keys(diag.sent);
-            if (keys.length > 10) delete diag.sent[keys[0]];
-            const r = diag.rtt;
-            socket.send(JSON.stringify({
-                type: 'ping', id, t: now, drift,
-                vis: document.visibilityState, online: navigator.onLine,
-                ...diagNetInfo(),
-                lost: Object.keys(diag.sent).length - 1,
-                rtt: r.last, rttMin: r.min, rttMax: r.max,
-                rttAvg: r.n ? Math.round(r.sum / r.n) : null, rttN: r.n
-            }));
-            storageSet('marsDiagAlive', { t: now, vis: document.visibilityState });
-        }
-
-        function diagOnOpen(socket) {
-            const now = Date.now();
-            Object.assign(diag, {
-                socket, openedAt: now, lastServerMsgAt: now, sent: {}, hiddenTotalMs: 0,
-                rtt: { min: null, max: null, sum: 0, n: 0, last: null },
-                hiddenSince: document.visibilityState === 'hidden' ? now : null
-            });
-            diagEvent('open');
-
-            let report = storageGet('marsDiagReport');
-            const alive = storageGet('marsDiagAlive');
-            if (report && alive) {
-                report.prevLastAliveAt = alive.t;
-                report.prevLastAliveVis = alive.vis;
-            } else if (alive) {
-                // 上一個頁面沒有留下任何關閉紀錄 (瀏覽器直接殺掉分頁 / 當機)
-                report = { closeSource: 'previous_page_killed_no_event', closedAt: alive.t,
-                    prevLastAliveAt: alive.t, prevLastAliveVis: alive.vis, events: [] };
-            }
-            const { et, dl, nrtt, nt } = diagNetInfo() || {};
-            try {
-                socket.send(JSON.stringify({
-                    type: 'clientDiag', sessionId: diag.sessionId, view: getClientView(), report,
-                    current: { vis: document.visibilityState, online: navigator.onLine, et, dl, nrtt, nt }
-                }));
-                localStorage.removeItem('marsDiagReport');
-            } catch (e) { /* ignore */ }
-
-            clearInterval(diag.timer);
-            let expected = now + DIAG_PING_MS;
-            diag.timer = setInterval(() => {
-                const t = Date.now();
-                const drift = Math.max(0, t - expected); // 背景分頁被節流時會變很大
-                expected = t + DIAG_PING_MS;
-                diagSendPing(socket, drift);
-            }, DIAG_PING_MS);
-            setTimeout(() => diagSendPing(socket, 0), 3000); // 先快速量一次 RTT
-        }
-
-        function diagOnPong(data) {
-            let obj;
-            try { obj = JSON.parse(data); } catch (e) { return; }
-            if (!obj || typeof obj.t !== 'number') return;
-            const rtt = Date.now() - obj.t;
-            const r = diag.rtt;
-            r.last = rtt; r.n++; r.sum += rtt;
-            if (r.min === null || rtt < r.min) r.min = rtt;
-            if (r.max === null || rtt > r.max) r.max = rtt;
-            delete diag.sent[obj.id];
-        }
-
-        document.addEventListener('visibilitychange', () => {
-            const now = Date.now();
-            if (document.visibilityState === 'hidden') diag.hiddenSince = now;
-            else if (diag.hiddenSince) { diag.hiddenTotalMs += now - diag.hiddenSince; diag.hiddenSince = null; }
-            diagEvent('visibility', document.visibilityState);
-        });
-        window.addEventListener('online', () => diagEvent('online'));
-        window.addEventListener('offline', () => diagEvent('offline'));
-        window.addEventListener('pageshow', e => diagEvent('pageshow', e.persisted ? 'bfcache' : ''));
-        window.addEventListener('pagehide', e => {
-            diagEvent('pagehide', e.persisted ? 'bfcache' : '');
-            diagSaveReport(null, 'page_unload');
-        });
-        document.addEventListener('freeze', () => diagEvent('freeze'));
-        document.addEventListener('resume', () => diagEvent('resume'));
-        navigator.connection?.addEventListener?.('change', () => {
-            const i = diagNetInfo();
-            diagEvent('netchange', i ? i.et + '/' + i.dl + '/' + i.nrtt : '');
-        });
-
-        // ===== 地圖 =====
-        const mapState = { data: null, view: 'nearby' };
-        const NEARBY_MAP_VIEW_BOX = '50 40 900 520';
-        const VERTICAL_DIRECTIONS = ['up', 'down'];
-        const mapDirectionNames = { north: '北', east: '東', south: '南', west: '西', up: '上', down: '下' };
-        const mapDirectionOffsets = {
-            north: { x: 0, y: -1 }, east: { x: 1, y: 0 }, south: { x: 0, y: 1 },
-            west: { x: -1, y: 0 }, up: { x: 1, y: -1 }, down: { x: -1, y: 1 }
-        };
-        const mapSvg = $('mapSvg');
-        let drawTarget = mapSvg; // 目前繪圖的 SVG(附近地圖或區域全圖視窗)
-        let areaWin = null;
-
-        function svgElement(name, attributes = {}) {
-            const element = document.createElementNS('http://www.w3.org/2000/svg', name);
-            for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
-            return element;
-        }
-
-        function addMapNode(room, { x, y }, isCurrent, direction) {
-            const width = 156;
-            const height = 64;
-            const group = svgElement('g', {
-                class: `map-room-node${isCurrent ? ' current' : ''}${direction ? ' neighbor' : ''}`,
-                transform: `translate(${x - width / 2}, ${y - height / 2})`
-            });
-            const title = svgElement('text', {
-                x: width / 2, y: height / 2, 'text-anchor': 'middle', 'dominant-baseline': 'middle'
-            });
-            title.textContent = Array.from(room.name || `房間 ${room.id}`).slice(0, 5).join('');
-            group.append(svgElement('rect', { x: 0, y: 0, width, height, rx: 12 }), title);
-            VERTICAL_DIRECTIONS.forEach((vertical, index) => {
-                if (!room.connections?.[vertical]) return;
-                const indicator = svgElement('text', {
-                    class: 'map-vertical-indicators',
-                    x: width / 2 + (index === 0 ? -12 : 12),
-                    y: 61,
-                    'text-anchor': 'middle'
-                });
-                indicator.textContent = vertical === 'up' ? '↑' : '↓';
-                // 只有目前房間的上下樓可以點擊移動
-                if (isCurrent) makeActivatable(indicator, `${mapDirectionNames[vertical]}：移動`, () => sendMessage(vertical));
-                group.append(indicator);
-            });
-            if (direction) {
-                makeActivatable(group, `${mapDirectionNames[direction]}：${room.name}，按下移動`, () => sendMessage(direction));
-            }
-            drawTarget.append(group);
-        }
-
-        function addMapLink(from, to, direction, vertical) {
-            const line = svgElement('line', {
-                class: `map-link${vertical ? ' vertical' : ''}`,
-                x1: from.x, y1: from.y, x2: to.x, y2: to.y
-            });
-            const label = svgElement('text', {
-                class: 'map-direction-label',
-                x: (from.x + to.x) / 2,
-                y: (from.y + to.y) / 2 - 8,
-                'text-anchor': 'middle'
-            });
-            label.textContent = mapDirectionNames[direction] || direction;
-            drawTarget.append(line, label);
-        }
-
-        // 畫出房間與連線;pointFor(room) 回傳房間座標;markVertical 時上下樓連線用虛線
-        function drawMapRooms(rooms, currentRoom, pointFor, markVertical) {
-            const roomById = new Map(rooms.map(room => [String(room.id), room]));
-            const drawnLinks = new Set();
-            for (const room of rooms) {
-                for (const [direction, target] of Object.entries(room.connections || {})) {
-                    const targetRoom = roomById.get(String(target.id));
-                    if (!targetRoom) continue;
-                    const key = [String(room.id), String(target.id)].sort().join(':');
-                    if (drawnLinks.has(key)) continue;
-                    drawnLinks.add(key);
-                    addMapLink(pointFor(room), pointFor(targetRoom), direction,
-                        markVertical && VERTICAL_DIRECTIONS.includes(direction));
-                }
-            }
-            const exitByRoomId = new Map(
-                Object.entries(currentRoom.connections || {}).reverse().map(([direction, target]) => [String(target.id), direction])
-            );
-            for (const room of rooms) {
-                addMapNode(room, pointFor(room), String(room.id) === String(currentRoom.id), exitByRoomId.get(String(room.id)));
-            }
-        }
-
-        // 區域全圖:從目前房間開始依出口方向 BFS 排版,位置衝突時往外找空位
-        function getAreaMapPositions(rooms, currentRoomId) {
-            const roomById = new Map(rooms.map(room => [String(room.id), room]));
-            const positions = new Map();
-            const occupied = new Set();
-            const pending = [];
-
-            function place(id, desired) {
-                let { x, y } = desired;
-                for (let radius = 1; occupied.has(`${x},${y}`); radius++) {
-                    for (let dx = -radius; dx <= radius; dx++) {
-                        const dy = radius - Math.abs(dx);
-                        const free = (dy === 0 ? [[dx, 0]] : [[dx, dy], [dx, -dy]])
-                            .find(([ox, oy]) => !occupied.has(`${desired.x + ox},${desired.y + oy}`));
-                        if (free) {
-                            [x, y] = [desired.x + free[0], desired.y + free[1]];
-                            break;
-                        }
-                    }
-                }
-                occupied.add(`${x},${y}`);
-                positions.set(String(id), { x, y });
-                pending.push(String(id));
-            }
-
-            function visitReachableRooms() {
-                while (pending.length > 0) {
-                    const id = pending.shift();
-                    const position = positions.get(id);
-                    for (const [direction, target] of Object.entries(roomById.get(id).connections || {})) {
-                        const targetId = String(target.id);
-                        const offset = mapDirectionOffsets[direction];
-                        if (!offset || !roomById.has(targetId) || positions.has(targetId)) continue;
-                        place(targetId, { x: position.x + offset.x, y: position.y + offset.y });
-                    }
-                }
-            }
-
-            if (roomById.has(String(currentRoomId))) place(currentRoomId, { x: 0, y: 0 });
-            visitReachableRooms();
-            rooms.forEach((room, index) => {
-                if (positions.has(String(room.id))) return;
-                place(room.id, { x: index * 2, y: 0 });
-                visitReachableRooms();
-            });
-            return positions;
-        }
-
-        const areaWinOpen = () => Boolean(areaWin && !areaWin.closed);
-
-        function renderMap() {
-            const data = mapState.data;
-            const currentRoom = data?.currentRoom;
-            $('mapTitle').textContent = data ? data.areaName : '地圖';
-            mapSvg.replaceChildren();
-            mapSvg.hidden = !currentRoom;
-            if (!currentRoom) {
-                if (areaWinOpen()) areaWin.close();
-                return;
-            }
-
-            // 區域全圖資料只有 wizard 會收到(伺服器端判斷),沒有 areaRooms 就不提供
-            const hasArea = Boolean(data.canViewAreaMap && data.areaRooms);
-            const areaButton = document.querySelector('[data-map-view="area"]');
-            areaButton.hidden = !hasArea;
-            if (!hasArea && areaWinOpen()) areaWin.close();
-            areaButton.classList.toggle('active', areaWinOpen());
-
-            drawTarget = mapSvg;
-            drawMapRooms(data.rooms, currentRoom, room => ({ x: 500 + room.x * 175, y: 300 + room.y * 100 }), false);
-            mapSvg.setAttribute('viewBox', NEARBY_MAP_VIEW_BOX);
-
-            if (hasArea && areaWinOpen()) renderAreaMap(data);
-        }
-
-        const AREA_WIN_HTML = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>區域全圖</title><style>
-            html, body { margin: 0; height: 100%; background: #17191e; color: #eadbb8; font: 16px sans-serif; }
-            body { display: flex; flex-direction: column; }
-            header { padding: 8px 12px; border-bottom: 1px solid #443a29; }
-            main { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px; }
-            svg { display: block; min-width: 100%; min-height: 100%; border: 1px solid #39352c; border-radius: 8px;
-                background-color: #111318; background-image: radial-gradient(#4b4230 1px, transparent 1px); background-size: 24px 24px; }
-            .map-link { stroke: #8d7951; stroke-width: 3; }
-            .map-link.vertical { stroke: #7196aa; stroke-dasharray: 8 6; }
-            .map-direction-label { fill: #d7c18d; font: 14px sans-serif; paint-order: stroke; stroke: #111318; stroke-width: 4px; }
-            .map-room-node { cursor: pointer; }
-            .map-room-node rect { fill: #292b30; stroke: #766442; stroke-width: 2; }
-            .map-room-node.current rect { fill: #514326; stroke: #e4c36e; stroke-width: 3; }
-            .map-room-node.neighbor:hover rect { fill: #3e4a4b; stroke: #a7d1d6; }
-            .map-room-node text { fill: #f0e6cf; font: 28px sans-serif; pointer-events: none; }
-            .map-room-node .map-vertical-indicators { fill: #8db9c9; font-size: 16px; }
-        </style></head><body><header><strong id="t">區域全圖</strong></header>
-        <main><svg id="s" xmlns="http://www.w3.org/2000/svg"></svg></main></body></html>`;
-
-        // 區域全圖:真正獨立的瀏覽器視窗(可拖到其他螢幕),以原始尺寸繪製,超出時捲動
-        function renderAreaMap(data) {
-            const doc = areaWin.document;
-            const svg = doc.getElementById('s');
-            if (!svg) return;
-            const rooms = data.areaRooms || [];
-            doc.getElementById('t').textContent = `${data.areaName} 區域全圖(${rooms.length} 間)`;
-            svg.replaceChildren();
-            if (!rooms.length) return;
-            const positions = getAreaMapPositions(rooms, data.currentRoom.id);
-            const all = [...positions.values()];
-            const minX = Math.min(...all.map(p => p.x));
-            const minY = Math.min(...all.map(p => p.y));
-            drawTarget = svg;
-            drawMapRooms(rooms, data.currentRoom, room => {
-                const p = positions.get(String(room.id));
-                return { x: 130 + (p.x - minX) * 190, y: 130 + (p.y - minY) * 120 };
-            }, true);
-            drawTarget = mapSvg;
-            const bounds = svg.getBBox();
-            if (!bounds.width || !bounds.height) return;
-            const padding = 12;
-            const w = Math.ceil(bounds.width + padding * 2);
-            const h = Math.ceil(bounds.height + padding * 2);
-            svg.setAttribute('viewBox', `${bounds.x - padding} ${bounds.y - padding} ${w} ${h}`);
-            svg.setAttribute('width', w);
-            svg.setAttribute('height', h);
-        }
-
-        function updateMap(data) {
-            mapState.data = data.available ? data : null;
-            renderMap();
-        }
-
-        function openAreaMapWindow() {
-            if (!mapState.data?.areaRooms) return;
-            if (areaWinOpen()) { areaWin.focus(); return; }
-            areaWin = window.open('', 'marsAreaMap', 'popup=yes,width=1200,height=800');
-            if (!areaWin) { alert('瀏覽器擋住了彈出視窗,請允許此網站開啟彈出視窗'); return; }
-            areaWin.document.open();
-            areaWin.document.write(AREA_WIN_HTML);
-            areaWin.document.close();
-            areaWin.addEventListener('pagehide', () => setTimeout(renderMap, 0));
-            renderMap();
-        }
-        document.querySelector('[data-map-view="area"]').addEventListener('click', openAreaMapWindow);
-        window.addEventListener('beforeunload', () => { if (areaWinOpen()) areaWin.close(); });
-        $('mapCollapse').addEventListener('click', event => {
-            const collapsed = document.querySelector('.map-window').classList.toggle('collapsed');
-            event.currentTarget.textContent = collapsed ? '顯示地圖' : '隱藏地圖';
-            event.currentTarget.setAttribute('aria-expanded', String(!collapsed));
-        });
-
-        // ===== 輸出區捲動:使用者往上捲時分割成上下兩個視窗 =====
-        let isSplitting = false;
-        let isUserScrolling = false;
-        let scrollTimer;
-        let userScrollIntentUntil = 0;
-        let isOutputPointerDown = false;
-        const markUserScrollIntent = () => { userScrollIntentUntil = Date.now() + 800; };
-        const hasUserScrollIntent = () => isOutputPointerDown || Date.now() < userScrollIntentUntil;
-
-        function splitOutput() {
-            if (isMobileLayout()) return mergeOutput();
-            if (isSplitting) return;
-            outputTop.innerHTML = outputDiv.innerHTML;
-            const scrollRatio = outputDiv.scrollTop / (outputDiv.scrollHeight - outputDiv.clientHeight);
-            outputTop.scrollTop = (outputTop.scrollHeight - outputTop.clientHeight) * (1 - scrollRatio);
-            outputContainer.classList.add('split-view');
-            isSplitting = true;
-            scrollOutputToBottom();
-        }
-
-        function mergeOutput() {
-            if (!isSplitting) return;
-            outputContainer.classList.remove('split-view');
-            isSplitting = false;
-            outputTop.innerHTML = '';
-            scrollOutputToBottom();
-        }
-
-        // 頂部視窗捲到底時合併
-        function handleTopScroll() {
-            if (outputTop.scrollHeight - outputTop.scrollTop - outputTop.clientHeight < 10) mergeOutput();
-        }
-
-        outputDiv.addEventListener('scroll', () => {
-            if (isSplitting) return;
-            // 非使用者捲動 (例如調整視窗大小) 不開啟 output-top,維持在底部
-            if (!hasUserScrollIntent()) return scrollOutputToBottom();
-            if (outputDiv.scrollTop < outputDiv.scrollHeight - outputDiv.clientHeight - 10) splitOutput();
-        });
-        outputTop.addEventListener('scroll', handleTopScroll);
-        // 只有使用者主動捲動才允許開啟 output-top (視窗縮放造成的 scroll 事件不算)
-        ['touchmove', 'keydown'].forEach(type => {
-            outputDiv.addEventListener(type, markUserScrollIntent, { passive: true });
-        });
-        outputDiv.addEventListener('pointerdown', () => { isOutputPointerDown = true; });
-        ['pointerup', 'pointercancel'].forEach(type => {
-            window.addEventListener(type, () => { isOutputPointerDown = false; });
-        });
-        outputDiv.addEventListener('wheel', () => {
-            markUserScrollIntent();
-            isUserScrolling = true;
-            clearTimeout(scrollTimer);
-            scrollTimer = setTimeout(() => { isUserScrolling = false; }, 1000);
-        });
-        // 定期維持在底部 (例如圖片載入後內容變高)
-        setInterval(() => {
-            if (!isUserScrolling && !isSplitting) scrollOutputToBottom();
-        }, 100);
-        window.addEventListener('resize', () => {
-            if (isMobileLayout()) mergeOutput();
-        });
-
-        // ===== 版面:底部區塊高度 / 寬度與輸出區對齊 =====
-        const bottomContainer = document.querySelector('.bottom-container');
-        const leftPanel = document.querySelector('.left-panel');
-        const rightPanel = document.querySelector('.right-panel');
-        const rightPanelResizer = $('rightPanelResizer');
-
-        function setChatAreaHeight() {
-            reserveSelfNameWidth(); // 主題 / 寬度改變會影響字型大小
-            const mobile = isMobileLayout();
-            const leftContentHeight = $('inputArea').offsetHeight + $('statusBar').offsetHeight + $('targetInfoBar').offsetHeight;
-            // mobile: chatArea 固定為視窗高度的 20%
-            const chatHeight = mobile ? Math.round(window.innerHeight * 0.2) : leftContentHeight;
-            const leftPanelHeight = Math.max(leftContentHeight, leftPanel.scrollHeight);
-            const styles = getComputedStyle(bottomContainer);
-            const verticalPadding = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
-            const bottomHeight = mobile
-                ? leftPanelHeight + chatHeight + parseFloat(styles.rowGap) + verticalPadding
-                : Math.max(leftPanelHeight, chatHeight) + verticalPadding;
-
-            chatArea.style.height = `${chatHeight}px`;
-            bottomContainer.style.height = `${bottomHeight}px`;
-            outputContainer.style.marginBottom = `${bottomHeight}px`;
-
-            const outputRect = outputDiv.getBoundingClientRect();
-            bottomContainer.style.left = `${outputRect.left}px`;
-            bottomContainer.style.width = `${outputRect.width}px`;
-
-            // right-panel 隱藏時一併隱藏拖移控制
-            rightPanelResizer.hidden = getComputedStyle(rightPanel).display === 'none';
-
-            layoutBossEventButton();
-            layoutInteractButton();
-        }
-        const relayout = () => window.requestAnimationFrame(setChatAreaHeight);
-
-        // 懸浮按鈕固定在 chatArea 正上方 (position:fixed,位置依 chatArea 實際位置即時計算,手機版 chatArea 在下方也適用)
-        // 玩家拖曳過就固定在拖曳的位置 (各自存 localStorage);沒拖曳過時:桌機在 chatArea 右上方,手機在畫面右上方 (方向鍵下方)
-        // slot: 預設位置從右邊數來第幾格 (0 = 最右),避免多個按鈕疊在一起
-        // onDragStart: 開始拖曳時呼叫 (例如收起按鈕的選單)
-        function makeFloatingButton(button, storageKey, slot, { onDragStart } = {}) {
-            const SLOT_WIDTH = 52;
-            let pos = null;
-            try { pos = JSON.parse(localStorage.getItem(storageKey)); } catch (e) { /* ignore */ }
-
-            function place(left, top) {
-                const maxLeft = Math.max(0, window.innerWidth - button.offsetWidth);
-                const maxTop = Math.max(0, window.innerHeight - button.offsetHeight);
-                Object.assign(button.style, {
-                    left: `${Math.min(Math.max(0, left), maxLeft)}px`,
-                    top: `${Math.min(Math.max(0, top), maxTop)}px`,
-                    right: 'auto',
-                    bottom: 'auto'
-                });
-            }
-
-            function layout() {
-                if (pos && Number.isFinite(pos.left) && Number.isFinite(pos.top)) {
-                    place(pos.left, pos.top);
-                    return;
-                }
-                Object.assign(button.style, { left: 'auto', top: 'auto' });
-                if (isMobileLayout()) {
-                    const numpad = document.querySelector('.mobile-numpad').getBoundingClientRect();
-                    button.style.right = `${8 + slot * SLOT_WIDTH}px`;
-                    button.style.top = `${numpad.bottom + 8}px`;
-                    button.style.bottom = 'auto';
-                    return;
-                }
-                const rect = chatArea.getBoundingClientRect();
-                button.style.right = `${Math.max(8, window.innerWidth - rect.right + 10) + slot * SLOT_WIDTH}px`;
-                button.style.bottom = `${Math.max(8, window.innerHeight - rect.top + 8)}px`;
-            }
-
-            // 拖曳 (滑鼠/觸控):移動超過 4px 才算拖曳,拖曳結束的那次 click 不送出指令
-            let start = null;
-            let dragged = false;
-            button.addEventListener('pointerdown', event => {
-                const rect = button.getBoundingClientRect();
-                start = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
-                dragged = false;
-                button.setPointerCapture(event.pointerId);
-            });
-            button.addEventListener('pointermove', event => {
-                if (!start) return;
-                const dx = event.clientX - start.x;
-                const dy = event.clientY - start.y;
-                if (!dragged && Math.hypot(dx, dy) < 4) return;
-                if (!dragged) onDragStart?.();
-                dragged = true;
-                pos = { left: start.left + dx, top: start.top + dy };
-                place(pos.left, pos.top);
-            });
-            const finish = () => {
-                if (start && dragged) {
-                    const rect = button.getBoundingClientRect();
-                    pos = { left: rect.left, top: rect.top };
-                    try { localStorage.setItem(storageKey, JSON.stringify(pos)); } catch (e) { /* ignore */ }
-                }
-                start = null;
-            };
-            button.addEventListener('pointerup', finish);
-            button.addEventListener('pointercancel', finish);
-            // capture 階段攔下拖曳結束的 click,不讓按鈕自己的 click 處理與 document 的指令送出收到
-            button.addEventListener('click', event => {
-                if (!dragged) return;
-                dragged = false;
-                event.stopImmediatePropagation();
-                event.preventDefault();
-            }, true);
-
-            return { layout };
-        }
-
-        const bossEventFloat = makeFloatingButton(bossEventButton, 'marsII.bossEventButtonPos', 0);
-        const interactFloat = makeFloatingButton(interactButton, 'marsII.interactButtonPos', 1, {
-            onDragStart: () => { if (actionMenuOwner === interactButton) hideActionMenu(); }
-        });
-        function layoutBossEventButton() {
-            bossEventFloat.layout();
-        }
-        function layoutInteractButton() {
-            interactFloat.layout();
-            positionActionMenu();
-        }
-
-        // ===== right-panel 寬度拖移 =====
-        (function initRightPanelResizer() {
-            const RIGHT_PANEL_WIDTH_KEY = 'marsII.rightPanelWidth';
-            const MIN_WIDTH = 280;
-            const MIN_OUTPUT_WIDTH = 360;
-            const root = document.documentElement;
-            let pendingFrame = 0;
-            const currentWidth = () => parseInt(getComputedStyle(root).getPropertyValue('--right-panel-width'), 10);
-            const clampWidth = width => Math.round(Math.min(Math.max(width, MIN_WIDTH),
-                Math.max(MIN_WIDTH, window.innerWidth - MIN_OUTPUT_WIDTH)));
-
-            function applyWidth(width) {
-                root.style.setProperty('--right-panel-width', `${clampWidth(width)}px`);
-                if (!pendingFrame) {
-                    pendingFrame = window.requestAnimationFrame(() => {
-                        pendingFrame = 0;
-                        // 觸發 resize,讓地圖與底部區塊重新計算
-                        window.dispatchEvent(new Event('resize'));
-                    });
-                }
-            }
-
-            const saved = parseInt(storageGet(RIGHT_PANEL_WIDTH_KEY), 10);
-            if (Number.isFinite(saved)) applyWidth(saved);
-
-            rightPanelResizer.addEventListener('pointerdown', event => {
-                if (event.button !== 0) return;
-                event.preventDefault();
-                rightPanelResizer.setPointerCapture(event.pointerId);
-                document.body.classList.add('is-resizing-right-panel');
-            });
-            rightPanelResizer.addEventListener('pointermove', event => {
-                if (rightPanelResizer.hasPointerCapture(event.pointerId)) applyWidth(window.innerWidth - event.clientX);
-            });
-            rightPanelResizer.addEventListener('pointerup', event => {
-                if (rightPanelResizer.hasPointerCapture(event.pointerId)) rightPanelResizer.releasePointerCapture(event.pointerId);
-            });
-            // pointerup / pointercancel 後都會觸發
-            rightPanelResizer.addEventListener('lostpointercapture', () => {
-                document.body.classList.remove('is-resizing-right-panel');
-                storageSet(RIGHT_PANEL_WIDTH_KEY, currentWidth());
-            });
-            // 視窗縮小時確保寬度仍在範圍內
-            window.addEventListener('resize', () => {
-                const clamped = clampWidth(currentWidth());
-                if (clamped !== currentWidth()) root.style.setProperty('--right-panel-width', `${clamped}px`);
-            });
-        })();
-
-        // ===== 物品 / 裝備分頁 =====
-        document.querySelectorAll('.tab-btn').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab-btn').forEach(t => {
-                    const active = t === tab;
-                    t.classList.toggle('active', active);
-                    document.querySelector(`.${t.dataset.panel}-panel`).classList.toggle('active', active);
-                });
-            });
-        });
-
-        // ===== 設定 =====
-        const SETTINGS_STORAGE_KEY = 'marsII.clientSettings';
-        const LEGACY_THEME_STORAGE_KEY = 'terminalThemeColor';
-        const STATUS_OPTIONS = [
-            ['hp', '生命'], ['mana', '法力'], ['move', '體力'], ['gold', '金幣'], ['food', '飽食'], ['drink', '口渴'],
-            ['armor', '護甲'], ['damroll', '傷害'], ['hitroll', '命中'], ['str', '力量'], ['int', '智力'], ['dex', '敏捷'],
-            ['wis', '學識'], ['con', '體質'], ['poison', '中毒'], ['burn', '灼傷'], ['bleed', '流血'], ['level', '等級']
-        ];
-        const STATUS_KEYS = STATUS_OPTIONS.map(([key]) => key);
-        const EFFECT_KEYS = ['poison', 'burn', 'bleed'];
-        const COMBAT_KEYS = ['armor', 'damroll', 'hitroll', 'str', 'int', 'dex', 'wis', 'con'];
-        const THEMES = { green: 'green', white: 'rgb(255, 255, 255)', 'dark-fantasy': null, diablo: null };
-        const allStatusVisible = () => Object.fromEntries(STATUS_KEYS.map(key => [key, true]));
-        const currentSettings = {
-            account: '', password: '', notifyChat: false, dotAnim: true, hotAnim: true,
-            status: allStatusVisible(), theme: 'green'
-        };
-        // 持續傷害 / 持續治療動畫開關 (預設開啟)
-        const ANIM_SETTINGS = { dotAnim: $('dotAnimSetting'), hotAnim: $('hotAnimSetting') };
-        const accountInput = $('savedAccount');
-        const passwordInput = $('savedPassword');
-        const notifySetting = $('chatNotificationSetting');
-        const themeSelect = $('themeColor');
-        const settingsError = $('settingsError');
-        let settingsSaveTimer;
-        let settingsSaveChain = Promise.resolve();
-        let encryptedSavedPassword = null;
-        let passwordChanged = false;
-
-        // 建立狀態列顯示的勾選框
-        const statusCheckboxes = {};
-        for (const [key, label] of STATUS_OPTIONS) {
-            const row = document.createElement('label');
-            const box = Object.assign(document.createElement('input'), { type: 'checkbox', className: 'form-check-input m-0' });
-            box.addEventListener('change', () => {
-                applyStatusSettings();
-                queueSettingsSave();
-            });
-            statusCheckboxes[key] = box;
-            row.append(box, label);
-            $('statusOptions').append(row);
-        }
-
-        function showSettingsError(message) {
-            settingsError.textContent = message;
-            if (message) console.error(message);
-        }
-
-        function applyTheme(themeKey) {
-            const theme = Object.hasOwn(THEMES, themeKey) ? themeKey : 'green';
-            // diablo 主題疊加在 dark-fantasy 的版面之上,因此兩個 class 同時啟用
-            document.body.classList.toggle('theme-dark-fantasy', theme === 'dark-fantasy' || theme === 'diablo');
-            document.body.classList.toggle('theme-diablo', theme === 'diablo');
-            outputDiv.style.color = THEMES[theme] || '';
-            themeSelect.value = theme;
-            currentSettings.theme = theme;
-            relayout();
-        }
-
-        function setStatusCheckboxes(status) {
-            STATUS_KEYS.forEach(key => { statusCheckboxes[key].checked = status[key]; });
-        }
-
-        function applyStatusSettings() {
-            const status = currentSettings.status;
-            STATUS_KEYS.forEach(key => {
-                status[key] = statusCheckboxes[key].checked;
-                document.querySelector(`[data-status-key="${key}"]`).hidden = !status[key];
-            });
-            document.querySelector('.status-effects').hidden = !EFFECT_KEYS.some(key => status[key]);
-            document.querySelector('.status-combat').hidden = !COMBAT_KEYS.some(key => status[key]);
-            relayout();
-        }
-
-        // 密碼以 AES-GCM 加密後存在 localStorage,金鑰 (不可匯出) 存在 IndexedDB
-        function idbRequest(request) {
-            return new Promise((resolve, reject) => {
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        async function getCredentialKey(createIfMissing) {
-            const openRequest = indexedDB.open('marsII-settings', 1);
-            openRequest.onupgradeneeded = () => openRequest.result.createObjectStore('keys');
-            const database = await idbRequest(openRequest);
-            try {
-                const existingKey = await idbRequest(database.transaction('keys', 'readonly').objectStore('keys').get('credentials'));
-                if (existingKey || !createIfMissing) return existingKey;
-                const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
-                await new Promise((resolve, reject) => {
-                    const transaction = database.transaction('keys', 'readwrite');
-                    transaction.objectStore('keys').put(key, 'credentials');
-                    transaction.oncomplete = resolve;
-                    transaction.onerror = transaction.onabort = () => reject(transaction.error);
-                });
-                return key;
-            } finally {
-                database.close();
-            }
-        }
-
-        const bytesToBase64 = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes)));
-        const base64ToBytes = value => Uint8Array.from(atob(value), character => character.charCodeAt(0));
-
-        async function encryptPassword(password) {
-            if (!password) return null;
-            if (!window.crypto?.subtle || !window.indexedDB) {
-                throw new Error('此瀏覽器不支援安全的密碼儲存，密碼未被保存。');
-            }
-            const key = await getCredentialKey(true);
-            const iv = crypto.getRandomValues(new Uint8Array(12));
-            const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(password));
-            return { iv: bytesToBase64(iv), ciphertext: bytesToBase64(ciphertext) };
-        }
-
-        async function decryptPassword(encryptedPassword) {
-            if (!window.crypto?.subtle || !window.indexedDB) {
-                throw new Error('此瀏覽器不支援解密已儲存的密碼。');
-            }
-            const key = await getCredentialKey(false);
-            if (!key) throw new Error('找不到密碼解密金鑰，請重新輸入密碼。');
-            const plaintext = await crypto.subtle.decrypt(
-                { name: 'AES-GCM', iv: base64ToBytes(encryptedPassword.iv) },
-                key,
-                base64ToBytes(encryptedPassword.ciphertext)
-            );
-            return new TextDecoder().decode(plaintext);
-        }
-
-        function queueSettingsSave() {
-            clearTimeout(settingsSaveTimer);
-            settingsSaveTimer = setTimeout(() => {
-                settingsSaveChain = settingsSaveChain.then(async () => {
-                    const passwordToSave = passwordInput.value;
-                    const shouldSavePassword = passwordChanged;
-                    const encryptedPassword = shouldSavePassword ? await encryptPassword(passwordToSave) : encryptedSavedPassword;
-                    const settings = {
-                        account: accountInput.value.trim(),
-                        password: encryptedPassword,
-                        notifyChat: notifySetting.checked,
-                        dotAnim: ANIM_SETTINGS.dotAnim.checked,
-                        hotAnim: ANIM_SETTINGS.hotAnim.checked,
-                        status: { ...currentSettings.status },
-                        theme: themeSelect.value
-                    };
-                    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-                    currentSettings.account = settings.account;
-                    currentSettings.notifyChat = settings.notifyChat;
-                    encryptedSavedPassword = encryptedPassword;
-                    showSettingsError('');
-                    applyTheme(settings.theme);
-                    if (!shouldSavePassword) return;
-                    if (passwordInput.value === passwordToSave) {
-                        currentSettings.password = passwordToSave;
-                        passwordChanged = false;
-                    } else {
-                        queueSettingsSave(); // 儲存期間密碼又被修改
-                    }
-                }).catch(error => showSettingsError(`設定儲存失敗：${error.message}`));
-            }, 180);
-        }
-
-        function disableChatNotification(message) {
-            notifySetting.checked = false;
-            currentSettings.notifyChat = false;
-            showSettingsError(message);
-        }
-
-        async function onChatNotificationChange() {
-            if (notifySetting.checked) {
-                if (!('Notification' in window)) {
-                    disableChatNotification('此瀏覽器不支援桌面通知。');
-                } else {
-                    try {
-                        const permission = Notification.permission === 'default'
-                            ? await Notification.requestPermission()
-                            : Notification.permission;
-                        if (permission === 'granted') {
-                            currentSettings.notifyChat = true;
-                            showSettingsError('');
-                        } else {
-                            disableChatNotification('瀏覽器通知權限未開啟，訊息提醒已停用。');
-                        }
-                    } catch (error) {
-                        disableChatNotification(`無法啟用瀏覽器通知：${error.message}`);
-                    }
-                }
-            } else {
-                currentSettings.notifyChat = false;
-            }
-            queueSettingsSave();
-        }
-
-        async function initializeSettings() {
-            let stored = null;
-            try {
-                stored = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || 'null');
-            } catch (error) {
-                showSettingsError(`無法讀取已儲存的設定：${error.message}`);
-            }
-
-            if (stored && typeof stored === 'object') {
-                currentSettings.account = typeof stored.account === 'string' ? stored.account : '';
-                currentSettings.notifyChat = stored.notifyChat === true;
-                for (const [key, box] of Object.entries(ANIM_SETTINGS)) {
-                    currentSettings[key] = box.checked = stored[key] !== false;
-                }
-                currentSettings.status = Object.fromEntries(STATUS_KEYS.map(key => [
-                    key, typeof stored.status?.[key] === 'boolean' ? stored.status[key] : true
-                ]));
-                accountInput.value = currentSettings.account;
-                notifySetting.checked = currentSettings.notifyChat;
-                applyTheme(stored.theme);
-            } else {
-                applyTheme(localStorage.getItem(LEGACY_THEME_STORAGE_KEY));
-            }
-            setStatusCheckboxes(currentSettings.status);
-            applyStatusSettings();
-
-            if (stored?.password) {
-                encryptedSavedPassword = stored.password;
-                try {
-                    passwordInput.value = await decryptPassword(stored.password);
-                    currentSettings.password = passwordInput.value;
-                } catch (error) {
-                    showSettingsError(`無法解密已儲存的密碼：${error.message}`);
-                }
-            }
-        }
-
-        accountInput.addEventListener('input', queueSettingsSave);
-        passwordInput.addEventListener('input', () => {
-            passwordChanged = true;
-            queueSettingsSave();
-        });
-        notifySetting.addEventListener('change', onChatNotificationChange);
-        for (const [key, box] of Object.entries(ANIM_SETTINGS)) {
-            box.addEventListener('change', () => {
-                currentSettings[key] = box.checked;
-                queueSettingsSave();
-            });
-        }
-        themeSelect.addEventListener('change', () => {
-            applyTheme(themeSelect.value);
-            queueSettingsSave();
-        });
-
-        const settingsReady = initializeSettings().catch(error => {
-            showSettingsError(`設定初始化失敗：${error.message}`);
-        });
-
-        // ===== 設定面板開關 / 拖移 =====
-        const settingsButton = $('themeSelector');
-        const settingsPanel = $('settingsPanel');
-        const platformName = navigator.userAgentData?.platform || navigator.platform || '';
-        settingsPanel.classList.toggle('is-macos', /mac/i.test(platformName));
-
-        function placeSettingsPanel(left, top) {
-            if (settingsPanel.hidden) return;
-            const maxLeft = Math.max(0, window.innerWidth - settingsPanel.offsetWidth);
-            const maxTop = Math.max(0, window.innerHeight - settingsPanel.offsetHeight);
-            settingsPanel.style.left = `${Math.min(Math.max(0, left), maxLeft)}px`;
-            settingsPanel.style.top = `${Math.min(Math.max(0, top), maxTop)}px`;
-        }
-        const clampSettingsPanel = () => placeSettingsPanel(settingsPanel.offsetLeft, settingsPanel.offsetTop);
-
-        function setSettingsPanelOpen(open) {
-            settingsPanel.hidden = !open;
-            settingsButton.setAttribute('aria-expanded', String(open));
-            if (open) {
-                placeSettingsPanel((window.innerWidth - settingsPanel.offsetWidth) / 2,
-                    (window.innerHeight - settingsPanel.offsetHeight) / 2);
-            }
-        }
-
-        settingsButton.addEventListener('click', () => setSettingsPanelOpen(settingsPanel.hidden));
-        $('settingsClose').addEventListener('click', () => setSettingsPanelOpen(false));
-        (function enableSettingsDrag() {
-            const header = settingsPanel.querySelector('.settings-header');
-            let drag = null;
-            header.addEventListener('pointerdown', event => {
-                if (event.target.closest('button')) return;
-                drag = { dx: event.clientX - settingsPanel.offsetLeft, dy: event.clientY - settingsPanel.offsetTop };
-                header.setPointerCapture(event.pointerId);
-            });
-            header.addEventListener('pointermove', event => {
-                if (drag) placeSettingsPanel(event.clientX - drag.dx, event.clientY - drag.dy);
-            });
-            const endDrag = () => { drag = null; };
-            header.addEventListener('pointerup', endDrag);
-            header.addEventListener('pointercancel', endDrag);
-            window.addEventListener('resize', clampSettingsPanel);
-            new ResizeObserver(clampSettingsPanel).observe(settingsPanel);
-        })();
-        $('settingsReset').addEventListener('click', () => {
-            accountInput.value = '';
-            passwordInput.value = '';
-            notifySetting.checked = false;
-            currentSettings.notifyChat = false;
-            for (const [key, box] of Object.entries(ANIM_SETTINGS)) currentSettings[key] = box.checked = true;
-            currentSettings.password = '';
-            passwordChanged = true;
-            setStatusCheckboxes(allStatusVisible());
-            applyStatusSettings();
-            applyTheme('dark-fantasy');
-            queueSettingsSave();
-        });
-        document.addEventListener('click', event => {
-            if (!settingsPanel.hidden && !settingsPanel.contains(event.target) && !settingsButton.contains(event.target)) {
-                setSettingsPanelOpen(false);
-            }
-        });
-        window.addEventListener('resize', setChatAreaHeight);
-        // 手機瀏覽器工具列收合/展開時,visualViewport 會變動但 window resize 不一定觸發
-        window.visualViewport?.addEventListener('resize', setChatAreaHeight);
-        relayout();
-
-        // ===== 伺服器訊息處理 =====
-        const DOT_ICONS = {
-            bleed: './assets/images/bleeding-wound.svg',
-            burn: './assets/images/burning-dot.svg',
-            poison: './assets/images/death-skull.svg'
-        };
-        const HEAL_ICON = './assets/images/heal.svg';
-        const dotFloatLayer = $('dotFloatLayer');
-
-        // 每個 tick 的浮動數值動畫(蓋在 output-container 上,1 秒後移除)
-        function spawnFloat(parent, className, icon, text) {
-            const el = document.createElement('div');
-            el.className = `dot-float ${className}`;
-            const img = document.createElement('img');
-            img.src = icon;
-            const span = document.createElement('span');
-            span.textContent = text;
-            el.append(img, span);
-            parent.append(el);
-            setTimeout(() => el.remove(), 1100);
-            return el;
-        }
-
-        // 浮動列放在玩家名稱上方:玩家區與「名稱 (血量%)」同寬,DOT 靠左、HOT 靠右;
-        // 目標 DOT 欄盡量對齊目標名稱 (玩家區被撐寬時往右移,不重疊)
-        // 名稱列被隱藏 (mobile) 時放在左下角
-        function layoutFloatRow() {
-            const row = $('floatRow');
-            const layerRect = dotFloatLayer.getBoundingClientRect();
-            const self = $('targetTargetName').getBoundingClientRect();
-            const hasName = self.width > 0;
-            const rowLeft = hasName ? Math.max(0, self.left - layerRect.left) : 12;
-            row.style.left = `${rowLeft}px`;
-            row.style.bottom = `${hasName ? Math.max(0, layerRect.bottom - self.top + 2) : 12}px`;
-            $('selfFloats').style.minWidth = hasName
-                ? `${Math.max(self.width, $('targetTargetHp').getBoundingClientRect().right - self.left)}px`
-                : '6em';
-
-            const targetLane = $('targetDotLane');
-            const target = $('targetName').getBoundingClientRect();
-            targetLane.style.marginLeft = '0px';
-            if (target.width > 0) {
-                const desired = target.left - layerRect.left - rowLeft;
-                targetLane.style.marginLeft = `${Math.max(0, desired - targetLane.offsetLeft)}px`;
-            }
-        }
-
-        function showFloat(laneId, className, icon, text) {
-            layoutFloatRow();
-            spawnFloat($(laneId), className, icon, text);
-        }
-
-        function showDotFloat(data) {
-            const icon = DOT_ICONS[data.dotType];
-            if (!icon || !currentSettings.dotAnim) return;
-            showFloat(data.onSelf ? 'selfDotLane' : 'targetDotLane', data.dotType, icon, `-${data.damage}`);
-        }
-
-        function showHotFloat(data) {
-            if (currentSettings.hotAnim) showFloat('selfHotLane', 'heal', HEAL_ICON, `+${data.value}`);
-        }
-
-        function updateChat(data) {
-            chatArea.insertAdjacentHTML('beforeend', `<p>${data.msg}</p>`);
-            if (currentSettings.notifyChat && 'Notification' in window && Notification.permission === 'granted') {
-                const message = chatArea.lastElementChild?.textContent?.trim();
-                if (message) {
-                    try {
-                        const notification = new Notification('Mars: Origin', { body: message, icon: './assets/images/MO_ICON2.png' });
-                        setTimeout(() => notification.close(), 8000);
-                    } catch (error) {
-                        console.error('無法顯示訊息通知:', error);
-                    }
-                }
-            }
-            while (chatArea.childNodes.length > MAX_CHAT_LINES) chatArea.firstChild.remove();
-        }
-
-        // 每日王城活動的 [參加活動] 浮動按鈕:同時可能有多場活動,只顯示最早開始的一場;
-        // action 'start' 表示活動開始 (或補送登入時仍在進行中的活動),'end'/'joined' 表示要把它從清單移除
-        const activeBossEvents = new Map();
-        function bossEventKey(data) {
-            return `${data.eventId}-${data.idx}-${data.dateKey}`;
-        }
-        function refreshBossEventButton() {
-            const next = activeBossEvents.values().next().value;
-            if (!next) {
-                bossEventButton.hidden = true;
-                bossEventButton.dataset.cmd = '';
-                return;
-            }
-            bossEventButton.dataset.cmd = `joinbossevent ${next.eventId} ${next.idx} ${next.dateKey}`;
-            bossEventButton.title = `參加「${next.name || '活動'}」`;
-            bossEventButton.hidden = false;
-            layoutBossEventButton();
-        }
-        const eventNotifySound = new Audio('./assets/images/event-notify.mp3');
-        function updateBossEvent(data) {
-            const key = bossEventKey(data);
-            if (data.action === 'start') {
-                // sound 由伺服器依玩家的「活動提醒音效」設定決定,只在活動首次開始時為 true
-                if (data.sound) {
-                    eventNotifySound.currentTime = 0;
-                    eventNotifySound.play().catch(() => {}); // 瀏覽器可能在使用者互動前擋掉自動播放
-                }
-                activeBossEvents.set(key, data);
-            } else {
-                activeBossEvents.delete(key);
-            }
-            refreshBossEventButton();
-        }
-
-        // 房間的 [互動] 浮動按鈕:伺服器在 look 房間時送來 { items: [...] };
-        // 房內 NPC 死亡 / 移動、玩家進出時也會推送 { items, refresh: true }
-        //   NPC / 其他玩家:{ label, actions: [{ label, cmd }] } (點了進入子選單:查看 / 攻擊)
-        //   裝飾物:{ label, cmd } (點了直接送出)
-        // 0 個:收起;只有 1 個裝飾物:按鈕直接送出;只有 1 個 NPC/玩家:直接開它的選單;多個:開清單選擇
-        let roomInteractItems = [];
-        function isValidActionCmd(action) {
-            return !!action && typeof action.cmd === 'string' && action.cmd !== '';
-        }
-        function updateRoomInteract(data) {
-            roomInteractItems = (Array.isArray(data.items) ? data.items : [])
-                .map(item => item && Array.isArray(item.actions)
-                    ? { label: item.label, actions: item.actions.filter(isValidActionCmd) }
-                    : item)
-                .filter(item => isValidActionCmd(item) || item?.actions?.length > 0);
-            if (data.refresh) {
-                // 房內異動:已開啟的選單保留,只換成最新內容 (對象已離開時收起)
-                refreshOpenActionMenu();
-            } else {
-                // 換房間 / 重新 look:舊的 NPC、玩家、物件選單都已失效
-                hideActionMenu();
-            }
-            if (roomInteractItems.length === 0) {
-                interactButton.hidden = true;
-                interactButton.dataset.cmd = '';
-                return;
-            }
-            const single = roomInteractItems.length === 1;
-            interactButton.dataset.cmd = single && roomInteractItems[0].cmd ? roomInteractItems[0].cmd : '';
-            interactButton.title = single
-                ? `互動:${roomInteractItems[0].label || ''}`
-                : `互動 (${roomInteractItems.length} 個對象)`;
-            interactButton.hidden = false;
-            layoutInteractButton();
-        }
-
-        // 目前清單中名稱為 label 的 NPC / 玩家的指令;同名的有多個時優先選指令完全相同的那個
-        // (同名 NPC 有一隻死亡後,剩下那隻的 "2.orc" 會變成 "orc",要用最新的指令)
-        function findCurrentActions(label, previousActions) {
-            const candidates = roomInteractItems.filter(item => item.actions && item.label === label);
-            if (!candidates.length) return null;
-            const previous = JSON.stringify(previousActions || []);
-            return (candidates.find(item => JSON.stringify(item.actions) === previous) || candidates[0]).actions;
-        }
-
-        function refreshOpenActionMenu() {
-            if (actionMenu.hidden || !actionMenuAnchor?.view) return;
-            const { owner, getRect, preferAbove, view } = actionMenuAnchor;
-            const options = { preferAbove, animate: false };
-            if (view.type === 'list') {
-                if (roomInteractItems.length) openInteractListMenu(options);
-                else hideActionMenu();
-                return;
-            }
-            const actions = findCurrentActions(view.label, view.actions);
-            if (actions) openEntityMenu(owner, getRect, view.label, actions, { ...options, fromList: view.fromList });
-            else if (view.fromList && roomInteractItems.length) openInteractListMenu(options);
-            else hideActionMenu();
-        }
-
-        // ===== 羊皮卷軸選單 (actionMenu) =====
-        // 選單項目前的線條圖示 (固定字串,依指令動詞挑選;不使用 emoji)
-        const ACTION_MENU_ICONS = {
-            look: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
-            kill: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/></svg>',
-            interact: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.6 5.6 1.9-5.6 1.9L12 18l-1.9-5.6-5.6-1.9 5.6-1.9z"/><path d="M19 17v4M17 19h4"/></svg>',
-            target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>',
-            back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>',
-            more: '<svg class="scroll-menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>'
-        };
-
-        // item 四種:{ label, cmd } 送出指令;{ label, actions } 進入子選單;{ label, onSelect } 選單內的動作 (返回);
-        //          { label, note: true } 不可點的說明文字
-        function buildActionMenuItem(item) {
-            if (item.note) {
-                const note = document.createElement('div');
-                note.className = 'scroll-menu-note';
-                note.textContent = item.label;
-                return note;
-            }
-            const el = document.createElement('button');
-            el.type = 'button';
-            el.className = 'scroll-menu-item';
-            el.setAttribute('role', 'menuitem');
-            let icon;
-            if (item.cmd) {
-                const verb = String(item.cmd).split(' ')[0];
-                el.classList.add('item-link');
-                el.dataset.cmd = item.cmd;
-                el.dataset.silent = 'true';
-                if (verb === 'kill') el.classList.add('is-danger');
-                icon = ACTION_MENU_ICONS[verb] || ACTION_MENU_ICONS.interact;
-            } else if (item.actions) {
-                el.setAttribute('aria-haspopup', 'menu');
-                el.addEventListener('click', () => openActionSubMenu(item));
-                icon = ACTION_MENU_ICONS.target;
-            } else {
-                el.classList.add('is-back');
-                el.addEventListener('click', item.onSelect);
-                icon = ACTION_MENU_ICONS.back;
-            }
-            el.insertAdjacentHTML('afterbegin', icon);
-            const label = document.createElement('span');
-            label.textContent = item.label || item.cmd || '';
-            el.append(label);
-            if (item.actions) el.insertAdjacentHTML('beforeend', ACTION_MENU_ICONS.more);
-            el.title = label.textContent;
-            return el;
-        }
-
-        const getInteractButtonRect = () => interactButton.getBoundingClientRect();
-
-        // [互動] 按鈕的清單 (NPC、玩家、裝飾物)
-        function openInteractListMenu({ preferAbove = true, animate = true } = {}) {
-            openActionMenu(interactButton, getInteractButtonRect, '互動', roomInteractItems,
-                { preferAbove, animate, view: { type: 'list' } });
-        }
-
-        // 某個 NPC / 玩家的選單;從清單進入時 (fromList) 最後附「返回」
-        function openEntityMenu(owner, getRect, label, actions, { preferAbove = false, animate = true, fromList = false } = {}) {
-            const items = fromList
-                ? [...actions, { label: '返回', onSelect: () => openInteractListMenu({ preferAbove }) }]
-                : actions;
-            openActionMenu(owner, getRect, label, items,
-                { preferAbove, animate, view: { type: 'entity', label, actions, fromList } });
-        }
-
-        // 從清單進入某個 NPC / 玩家的子選單
-        function openActionSubMenu(item) {
-            if (!actionMenuAnchor) return;
-            const { owner, getRect, preferAbove } = actionMenuAnchor;
-            openEntityMenu(owner, getRect, item.label, item.actions, { preferAbove, fromList: true });
-        }
-
-        // owner: 開啟選單的元素;getAnchorRect: 回傳選單要貼齊的位置;items: 見 buildActionMenuItem
-        // view: 目前顯示的內容 (清單 / 某個對象),房內異動時 refreshOpenActionMenu 依此重畫
-        function openActionMenu(owner, getAnchorRect, title, items, { preferAbove = false, animate = true, view = null } = {}) {
-            const scrollTop = actionMenuBody.scrollTop;
-            actionMenuTitle.textContent = title || '';
-            actionMenuTitle.hidden = !title;
-            actionMenuBody.replaceChildren(...items.map(buildActionMenuItem));
-            // 刷新時保留捲動位置,不重播展開動畫
-            actionMenuBody.scrollTop = animate ? 0 : scrollTop;
-            actionMenuOwner = owner;
-            actionMenuAnchor = { owner, getRect: getAnchorRect, preferAbove, view };
-            if (animate) {
-                actionMenu.hidden = true;
-                void actionMenu.offsetWidth;
-            }
-            actionMenu.hidden = false;
-            positionActionMenu();
-        }
-
-        function hideActionMenu() {
-            actionMenu.hidden = true;
-            actionMenuBody.replaceChildren();
-            actionMenuOwner = null;
-            actionMenuAnchor = null;
-        }
-
-        // 水平置中對齊錨點;垂直依 preferAbove 放上方或下方,空間不夠時改放另一側;都限制在視窗內 (捲軸木軸凸出 9px)
-        function positionActionMenu() {
-            if (actionMenu.hidden || !actionMenuAnchor) return;
-            const rect = actionMenuAnchor.getRect();
-            const menuW = actionMenu.offsetWidth;
-            const menuH = actionMenu.offsetHeight;
-            const margin = 12;
-            const gap = 10;
-            const left = Math.min(Math.max(margin, rect.left + rect.width / 2 - menuW / 2), window.innerWidth - menuW - margin);
-            const aboveTop = rect.top - menuH - gap;
-            const belowTop = rect.bottom + gap;
-            const fitsAbove = aboveTop >= margin;
-            const fitsBelow = belowTop + menuH <= window.innerHeight - margin;
-            let top = actionMenuAnchor.preferAbove
-                ? (fitsAbove || !fitsBelow ? aboveTop : belowTop)
-                : (fitsBelow || !fitsAbove ? belowTop : aboveTop);
-            top = Math.min(Math.max(margin, top), window.innerHeight - menuH - margin);
-            actionMenu.style.left = `${Math.max(margin, left)}px`;
-            actionMenu.style.top = `${Math.max(margin, top)}px`;
-        }
-        window.addEventListener('resize', positionActionMenu);
-
-        // [互動] 按鈕沒有 data-cmd 時 (多個對象,或唯一的對象是 NPC/玩家),點擊切換選單
-        interactButton.addEventListener('click', () => {
-            if (interactButton.dataset.cmd) return; // 單一裝飾物:交給 document 的指令連結處理
-            if (!actionMenu.hidden && actionMenuOwner === interactButton) {
-                hideActionMenu();
-                return;
-            }
-            const only = roomInteractItems.length === 1 ? roomInteractItems[0] : null;
-            if (only?.actions) openEntityMenu(interactButton, getInteractButtonRect, only.label, only.actions, { preferAbove: true });
-            else openInteractListMenu();
-        });
-
-        // look 房間時 NPC / 其他玩家行尾的 [互動] (.entity-link):點擊跳出卷軸選單 (NPC:查看/攻擊;玩家:查看)
-        document.addEventListener('click', event => {
-            const link = event.target instanceof Element ? event.target.closest('.entity-link') : null;
-            if (!link) return;
-            // 拖曳選取文字時不開選單
-            const selection = window.getSelection();
-            if (selection && !selection.isCollapsed) return;
-            if (!actionMenu.hidden && actionMenuOwner === link) {
-                hideActionMenu();
-                return;
-            }
-            let actions;
-            try {
-                actions = JSON.parse(link.dataset.actions || '[]');
-            } catch {
-                return;
-            }
-            actions = Array.isArray(actions) ? actions.filter(isValidActionCmd) : [];
-            if (!actions.length) return;
-            const title = link.dataset.title;
-            const getRect = () => link.getBoundingClientRect();
-            // 舊訊息裡的連結:以房間目前的清單為準 (NPC 死亡後編號會變);對象已不在房間時不送舊指令,避免打到別的目標
-            const current = findCurrentActions(title, actions);
-            if (current) openEntityMenu(link, getRect, title, current);
-            else openActionMenu(link, getRect, title, [{ label: '已不在這裡', note: true }]);
-        });
-
-        // 點送出指令的選單項目 (指令由 document 的指令連結處理送出) 或點選單以外的地方時收起;開啟選單的元素自己處理切換
-        // 用 composedPath (事件發生當下的路徑):子選單 / 返回會先替換選單內容,這時 target 已離開 DOM,closest 找不到選單
-        document.addEventListener('click', event => {
-            if (actionMenu.hidden) return;
-            const path = event.composedPath().filter(node => node instanceof Element);
-            const opener = path.find(el => el.id === 'interactButton' || el.classList.contains('entity-link'));
-            if (opener && (opener === actionMenuOwner || opener.classList.contains('entity-link'))) return;
-            if (path.includes(actionMenu) && !path.some(el => el.classList.contains('scroll-menu-item') && el.dataset.cmd)) return;
-            // 等 document 的指令連結處理讀完 data-cmd 再清空選單
-            setTimeout(hideActionMenu, 0);
-        });
-        document.addEventListener('keydown', event => {
-            if (event.key === 'Escape' && !actionMenu.hidden) hideActionMenu();
-        });
-
-        // 名稱 + 生命百分比,例如「哥布林 (35%)」
-        function setNameAndHp(nameId, hpId, name, hp) {
-            $(nameId).textContent = name || '';
-            $(hpId).textContent = name && hp?.max > 0 ? `(${Math.round(hp.current / hp.max * 100)}%)` : '';
-        }
-
-        // 玩家名稱 / 血量保留 1.2 倍寬度,讓上方同時出現的 DOT、HOT 都留在玩家區內,不會像是目標的資訊
-        const SELF_NAME_WIDTH_RATIO = 1.2;
-        function reserveSelfNameWidth() {
-            for (const id of ['targetTargetName', 'targetTargetHp']) {
-                const el = $(id);
-                el.style.minWidth = '';
-                const width = el.getBoundingClientRect().width;
-                if (width > 0) el.style.minWidth = `${Math.ceil(width * SELF_NAME_WIDTH_RATIO)}px`;
-            }
-        }
-
-        const EMPTY_STATUS = {
-            hp: { current: 0, max: 0 }, mana: { current: 0, max: 0 }, move: { current: 0, max: 0 },
-            status: {}, target: {}, combat: {}, attributes: {}
-        };
-
-        function updateStatus(data) {
-            EFFECT_KEYS.forEach(key => {
-                document.querySelector(`.status-effect.${key}`).classList.toggle('active', !!data.status?.[key]);
-            });
-
-            const { targetName, targetHp } = data.target || {};
-            setNameAndHp('targetName', 'targetHp', targetName, targetHp);
-            // 左側固定顯示玩家自己的名稱與生命比例
-            setNameAndHp('targetTargetName', 'targetTargetHp', data.playerName || '我', data.hp);
-            reserveSelfNameWidth();
-            // 沒有目標時隱藏箭頭
-            document.querySelector('#targetInfoBar .target-arrow-icon').style.visibility = targetName ? 'visible' : 'hidden';
-
-            for (const [key, id] of [['hp', 'Hp'], ['mana', 'Mana'], ['move', 'Move']]) {
-                const { current, max } = data[key];
-                $(`current${id}`).textContent = String(current);
-                $(`max${id}`).textContent = String(max);
-                document.querySelector(`.status-${key} .progress-bar`).style.width = `${max > 0 ? current / max * 100 : 0}%`;
-            }
-
-            const combat = data.combat || {};
-            const attributes = data.attributes || {};
-            const values = {
-                level: data.level, gold: data.gold, armor: combat.armor, damroll: combat.damroll, hitRate: combat.hitRate,
-                str: attributes.str, int: attributes.int, dex: attributes.dex, wis: attributes.wis, con: attributes.con
-            };
-            for (const [id, value] of Object.entries(values)) $(id).textContent = String(value || 0);
-            $('thirsty').textContent = `${data.thirsty || 0}%`;
-            $('hungry').textContent = `${data.hungry || 0}%`;
-        }
-
-        // 依行對應指令,把該行包成可點擊文字(cmds[i] 為空則不處理)
-        function linkifyLines(html, cmds) {
-            if (!Array.isArray(cmds) || !cmds.length) return html;
-            return html.split('\n').map((line, i) => {
-                const cmd = cmds[i];
-                if (!cmd || !line) return line;
-                return `<span class="item-link" data-cmd="${cmd.replace(/"/g, '&quot;')}">${line}</span>`;
-            }).join('\n');
-        }
-
-        function updateEqInv(data) {
-            // 裝備每行前面的耐久度 (例如 85/100) 不顯示
-            $('equipmentList').innerHTML = data.eq
-                ? linkifyLines(data.eq.replace(/(^|\n)(?:<span\b[^>]*>)?(?:\d+\/\d+|---\/---)(?:<\/span>)?[ \t]*/gi, '$1'), data.eqCmds)
-                : '無裝備';
-            $('inventoryList').innerHTML = data.inv ? linkifyLines(data.inv, data.invCmds) : '無物品';
-        }
-
-        const accountSection = $('accountSection');
-        const cnNameInput = $('cnNameInput');
-        const configToggles = $('configToggles');
-        const CONFIG_TOGGLES = [
-            [1, 'autoattack', '自動普通攻擊'],
-            [2, 'seeOtherDmg', '檢視其他玩家的普通攻擊'],
-            [3, 'autoloot', '自動拾取戰利品'],
-            [4, 'displayRecover', '顯示每小時的自動恢復量'],
-            [5, 'displayCooldown', '顯示冷卻中技能'],
-            [6, 'displayStats', '顯示生命狀態'],
-            [7, 'displayBody', '顯示身體機能'],
-            [9, 'displayHint', '顯示遊戲訣竅'],
-            [10, 'displayLoginOut', '顯示所有玩家登入與登出資訊'],
-            [11, 'eventSound', '活動提醒音效'],
-            [12, 'displayDayNight', '顯示晝夜變化訊息'],
-            [13, 'displayWeather', '顯示天氣變化訊息']
-        ];
-        CONFIG_TOGGLES.forEach(([id, key, label]) => {
-            const row = document.createElement('label');
-            const box = Object.assign(document.createElement('input'), { type: 'checkbox', className: 'form-check-input m-0' });
-            box.dataset.configKey = key;
-            box.addEventListener('change', () => sendMessage(`config ${box.checked ? '+' : '-'} ${id}`));
-            row.append(box, label);
-            configToggles.append(row);
-        });
-
-        function updateProfile(p) {
-            accountSection.hidden = !p.loggedIn;
-            if (!p.loggedIn) return;
-            if (document.activeElement !== cnNameInput) cnNameInput.value = p.cnName || '';
-            $('mailText').textContent = p.mail || '(未設定)';
-            $('mailStatus').textContent = p.mailVerified ? '已驗證' : '未驗證';
-            $('verifyRow').hidden = p.mailVerified || !p.mail;
-            configToggles.querySelectorAll('input[data-config-key]').forEach(box => {
-                box.checked = !!p.config?.[box.dataset.configKey];
-            });
-        }
-
-        // 送出輸入框內容後清空,有值才執行 command(value)
-        function submitInput(input, command) {
-            const value = input.value.trim();
-            if (!value) return;
-            sendMessage(command(value));
-            input.value = '';
-        }
-        $('cnNameButton').addEventListener('click', () => {
-            const name = cnNameInput.value.trim();
-            if (name) sendMessage(`config + 0 ${name}`);
-        });
-        $('sendVerifyMailButton').addEventListener('click', () => sendMessage('verifymail send'));
-        $('submitVerifyCodeButton').addEventListener('click', () => submitInput($('verifyCodeInput'), code => `verifymail ${code}`));
-        $('deleteCharacterButton').addEventListener('click', () => {
-            if (confirm('確定要永久刪除這個角色嗎？此動作無法復原。')) sendMessage('config deletenow');
-        });
-        const redeemCodeInput = $('redeemCodeInput');
-        const submitRedeemCode = () => submitInput(redeemCodeInput, code => `redeem ${code}`);
-        $('redeemCodeButton').addEventListener('click', submitRedeemCode);
-        redeemCodeInput.addEventListener('keydown', event => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                submitRedeemCode();
-            }
-        });
-
-        // ===== 連線 =====
-        function appendOutput(html) {
-            outputDiv.insertAdjacentHTML('beforeend', html);
-            while (outputDiv.childNodes.length > MAX_OUTPUT_LINES) outputDiv.firstChild.remove();
-            scrollOutputToBottom();
-        }
-
-        // server 通知目前是否在輸入密碼 (登入 / 建立角色)
-        function setPasswordInputMode(enabled) {
-            isPasswordInput = enabled;
-            inputBox.type = enabled ? 'password' : 'text';
-            inputBox.setAttribute('autocomplete', enabled ? 'current-password' : 'off');
-            if (enabled) inputBox.value = '';
-        }
-
-        const MESSAGE_HANDLERS = {
-            status: updateStatus,
-            eqinv: updateEqInv,
-            chat: updateChat,
-            mode: data => { inputMode = data.mode || null; },
-            map: updateMap,
-            profile: updateProfile,
-            dot: showDotFloat,
-            hot: showHotFloat,
-            passwordInput: data => setPasswordInputMode(data.enabled === true),
-            bossEvent: updateBossEvent,
-            roomInteract: updateRoomInteract
-        };
-
-        // 自動登入:送出已儲存的帳號 / 密碼 (不顯示、不記錄歷史)
-        function sendCredential(value) {
-            if (!isOpen()) return;
-            sendRaw(value);
-            inputBox.value = '';
-        }
-
-        async function handleTextMessage(text) {
-            await settingsReady;
-            if (autoLoginStage === 'account' && text.includes('請輸入您的帳號')) {
-                if (currentSettings.account && currentSettings.password) {
-                    sendCredential(currentSettings.account);
-                    autoLoginStage = 'password';
-                } else {
-                    autoLoginStage = 'manual';
-                }
-            } else if (autoLoginStage === 'password' && text.includes('請輸入您的密碼')) {
-                sendCredential(currentSettings.password);
-                autoLoginStage = 'sent';
-            }
-            appendOutput(`<p>${text}</p>`);
-        }
-
-        function connect() {
-            inputMode = null;
-            autoLoginStage = 'account';
-            setPasswordInputMode(false);
-            clearTimeout(reconnectTimer);
-            const socket = new WebSocket(SERVER_URL);
-            ws = socket;
-            socket.onopen = () => {
-                diagOnOpen(socket);
-                appendOutput('<p><img src="https://marsorigin.myctw.cc/assets/images/logo.jpg" alt="Mars: Origin" style="max-width: 100%; height: auto; display: block;"></p>');
-                resetInactivityTimer();
-                console.log(`[WS ${new Date().toISOString()}] OPEN url=${SERVER_URL}`);
-            };
-
-            socket.onmessage = async event => {
-                if (socket !== ws) return; // 舊連線的殘留訊息
-                diag.lastServerMsgAt = Date.now();
-                const text = String(event.data);
-                if (text.startsWith('{"type":"pong"')) return diagOnPong(text); // 診斷用 pong:不重設閒置計時器
-
-                let data;
-                try { data = JSON.parse(text); } catch (e) { data = undefined; }
-                if (data === undefined) {
-                    await handleTextMessage(text);
-                } else {
-                    MESSAGE_HANDLERS[data?.type]?.(data);
-                }
-                scrollOutputToBottom();
-                resetInactivityTimer();
-            };
-
-            socket.onclose = event => {
-                diagEvent('close', event.code);
-                diagSaveReport(event, null);
-                if (socket === diag.socket) clearInterval(diag.timer);
-                console.log(`[WS ${new Date().toISOString()}] CLOSE`,
-                    { code: event.code, reason: event.reason, wasClean: event.wasClean, readyState: socket.readyState });
-                // 已被新連線取代的舊 socket:不可影響目前的 ws
-                if (socket !== ws) return;
-                ws = null;
-                inputMode = null;
-                appendOutput('<span style="color: red;">與伺服器中斷連線。</span>');
-                clearTimeout(inactivityTimer);
-                resetUI();
-                reconnectTimer = setTimeout(connect, RECONNECT_MS);
-            };
-
-            socket.onerror = error => {
-                diagEvent('error');
-                console.error('WebSocket 錯誤:', error);
-            };
-        }
-
-        function sendRaw(command) {
-            ws.send(JSON.stringify({ command, mode: inputMode, view: getClientView() }));
-            resetInactivityTimer();
-        }
-
-        // 不帶參數時送出輸入框內容
-        // silent: true 時不回顯送出的指令文字、也不記錄到指令歷史 (給 [點擊參加] 連結、活動按鈕這類不是玩家手動輸入的指令用)
-        function sendMessage(message, { silent = false } = {}) {
-            const fromInput = !message;
-            if (fromInput) message = inputBox.value.trim();
-            if (!message) return;
-            if (!isOpen()) {
-                appendOutput('<span style="color: red;">尚未連線，請稍候重新連線或重新整理頁面。</span>\n');
-                return;
-            }
-            sendRaw(message);
-
-            // 密碼輸入:不顯示在 output、不記錄歷史、清空輸入框
-            if (isPasswordInput) {
-                inputBox.value = '';
-                return;
-            }
-
-            if (!silent) {
-                appendOutput(`<span style="color: yellow;">${escapeHtml(message)}</span>\n`);
-                if (!commandHistory.includes(message)) {
-                    commandHistory.unshift(message);
-                    if (commandHistory.length > MAX_COMMAND_HISTORY) commandHistory.pop();
-                }
-                currentHistoryIndex = -1;
-            }
-            if (fromInput) inputBox.select();
-        }
-
-        function resetInactivityTimer() {
-            clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(() => {
-                // 超過 300 秒沒有動作:登出並在 10 秒後自動重連
-                if (isOpen()) appendOutput('<span style="color: yellow;">超過300秒沒有動作，系統已自動登出</span>');
-                inputMode = null;
-                const old = ws;
-                ws = null; // 先清空,避免舊 socket 的 onclose 影響之後的新連線
-                if (old) {
-                    old.__closeSource = 'idle_300s';
-                    try { old.close(); } catch (e) { /* ignore */ }
-                }
-                resetUI();
-                clearTimeout(reconnectTimer);
-                reconnectTimer = setTimeout(connect, RECONNECT_MS);
-            }, IDLE_LOGOUT_MS);
-        }
-
-        // 玩家中斷時重置 UI
-        function resetUI() {
-            accountSection.hidden = true;
-            inputBox.value = '';
-            updateStatus(EMPTY_STATUS);
-            setNameAndHp('targetTargetName', 'targetTargetHp', '', null);
-            reserveSelfNameWidth();
-            $('equipmentList').innerHTML = '';
-            $('inventoryList').innerHTML = '';
-            // 斷線期間可能活動已結束,重新連線後由伺服器依目前狀態補送,這裡先清空避免殘留
-            activeBossEvents.clear();
-            refreshBossEventButton();
-            updateRoomInteract({ items: [] });
-        }
-
-        // ===== 輸入 =====
-        $('sendButton').addEventListener('click', () => sendMessage());
-
-        // 裝備/物品清單的指令連結、活動按鈕與手機方向按鈕;data-silent="true" 的連結/按鈕不回顯送出的指令文字
-        document.addEventListener('click', event => {
-            const target = event.target.closest?.('.item-link, .numpad-btn');
-            if (target?.dataset.cmd) sendMessage(target.dataset.cmd, { silent: target.dataset.silent === 'true' });
-        });
-
-        // 點擊畫面後,游標自動回到輸入框,不必再用滑鼠點輸入框就能直接打指令
-        // 不處理的情況: 輸出區(方便選取複製文字,但 .item-link 指令連結除外)、有選取文字、
-        //              設定面板內部(要打字,但「關閉」「預設」按鈕除外)、其他輸入元件
-        // 觸控裝置不處理(避免虛擬鍵盤一直彈出),發送按鈕、方向按鈕(numpad)與指令連結例外
-        (function refocusInputAfterClick() {
-            const focusInput = () => {
-                if (document.activeElement !== inputBox) inputBox.focus({ preventScroll: true });
-            };
-            const refocusSoon = () => {
-                // 等元件自己的處理(切分頁、重繪地圖、關閉設定)完成後再聚焦;再補一次避免被瀏覽器的按鈕焦點覆蓋
-                setTimeout(focusInput, 0);
-                requestAnimationFrame(focusInput);
-            };
-            document.addEventListener('click', event => {
-                const target = event.target;
-                if (!(target instanceof Element)) return;
-                // 沒有 data-cmd 的 (例如多個物件時的 [互動] 按鈕,只負責開選單) 不算指令連結,避免手機彈出鍵盤蓋住選單
-                const isCommandLink = !!target.closest('.item-link:not([data-cmd=""])');
-                const isSend = !!target.closest('#sendButton, .mobile-numpad');
-                if (event.pointerType === 'touch' && !isCommandLink && !isSend) return;
-                if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
-                if (target.closest('#settingsPanel') && !target.closest('#settingsClose, #settingsReset')) return;
-                if (!isCommandLink && target.closest('#output-container, #chatArea')) return;
-                const selection = window.getSelection();
-                if (selection && !selection.isCollapsed && !isCommandLink) return;
-                refocusSoon();
-            });
-            // Esc 關閉設定面板後也回到輸入框
-            document.addEventListener('keydown', event => {
-                if (event.key === 'Escape') refocusSoon();
-            });
-        })();
-
-        inputBox.addEventListener('keypress', event => {
-            if (event.key === 'Enter') {
-                sendMessage();
-                event.preventDefault();
-            }
-        });
-
-        // 上下鍵切換命令歷史
-        inputBox.addEventListener('keydown', event => {
-            const step = { ArrowUp: 1, ArrowDown: -1 }[event.key];
-            if (!step) return;
-            event.preventDefault();
-            const next = currentHistoryIndex + step;
-            if (next < -1 || next >= commandHistory.length) return;
-            currentHistoryIndex = next;
-            inputBox.value = next === -1 ? '' : commandHistory[next];
-            inputBox.select();
-        });
-
-        const NUMPAD_COMMANDS = {
-            Numpad4: 'west', Numpad5: 'look', Numpad6: 'east', Numpad8: 'north',
-            Numpad2: 'south', Numpad9: 'up', Numpad3: 'down'
-        };
-        // 互動模式 (鐵匠維修 / 商店購買、販售):數字鍵直接送出
-        const DIGIT_MODES = ['blacksmith', 'shop-buy', 'shop-sell'];
-        document.addEventListener('keydown', event => {
-            let command = null;
-            if (event.key === 'Escape' && !settingsPanel.hidden) {
-                setSettingsPanelOpen(false);
-                settingsButton.focus();
-            } else if (event.code === 'ScrollLock') {
-                handleTopScroll();
-                event.preventDefault();
-            } else if (DIGIT_MODES.includes(inputMode) && event.code.startsWith('Digit') && /^[0-9]$/.test(event.key)) {
-                command = event.key;
-            } else {
-                command = NUMPAD_COMMANDS[event.code];
-            }
-            if (command) {
-                sendMessage(command);
-                event.preventDefault();
-            }
-        });
-
-        connect();
-    </script>
+    <!-- 以下浮動面板放在 body 第一層:放在 .bottom-container 裡會被手機方向鍵盤蓋住 -->
+    <!-- 快捷指令列 (只在 mobile 顯示):常用指令一鍵送出,減少打字。預設在輸出區右下角,整組可拖曳 (game.js 快捷指令列)
+         直向排列,由下往上:[互動] (手機版由 JS 移進來,沒有對象時保留空位)、攻擊、開關、展開的指令 (狀態 / 物品 / 裝備 / 任務)。
+         用 column-reverse 排版,所以 DOM 順序就是由下往上;展開時往上長,開關與攻擊的位置不動。
+         「攻擊」開啟房內可攻擊對象的選單;其他按鈕直接送出 data-cmd (會回顯指令,玩家順便學會指令怎麼打) -->
+    <div id="quickBar" class="quick-bar" role="toolbar" aria-label="快捷指令" aria-orientation="vertical" hidden>
+        <button id="quickKill" class="quick-btn is-danger" type="button" aria-haspopup="menu" title="攻擊 (kill)">攻擊</button>
+        <button id="quickBarToggle" class="quick-btn quick-toggle" type="button" aria-expanded="false" aria-controls="quickBarItems" aria-label="展開快捷指令" title="展開快捷指令">
+            <svg class="quick-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>
+            <svg class="quick-icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="quickBarItems" class="quick-items" hidden>
+            <button class="quick-btn item-link" type="button" data-cmd="score" title="角色狀態 (score)" style="--i: 0">狀態</button>
+            <button class="quick-btn item-link" type="button" data-cmd="inventory" title="背包物品 (inventory)" style="--i: 1">物品</button>
+            <button class="quick-btn item-link" type="button" data-cmd="equipment" title="身上裝備 (equipment)" style="--i: 2">裝備</button>
+            <button class="quick-btn item-link" type="button" data-cmd="quest" title="任務進度 (quest)" style="--i: 3">任務</button>
+        </div>
+    </div>
+    <!-- 符文轉輪機 (slot):伺服器送 { type: 'slot', action: 'open' } 時顯示;不擋住遊戲畫面 (非強制對話框)。data-tier (1~3 樓) 決定機台主題 -->
+    <section id="slotPanel" role="dialog" aria-labelledby="slotTitle" hidden>
+        <header class="slot-header">
+            <h2 id="slotTitle">符文轉輪機</h2>
+            <button id="slotClose" class="slot-close" type="button" aria-label="關閉符文轉輪機">×</button>
+        </header>
+        <div class="slot-body">
+            <div class="slot-machine">
+                <div class="slot-window">
+                    <div class="slot-reel" aria-hidden="true"><div class="slot-strip"></div></div>
+                    <div class="slot-reel" aria-hidden="true"><div class="slot-strip"></div></div>
+                    <div class="slot-reel" aria-hidden="true"><div class="slot-strip"></div></div>
+                    <div class="slot-payline" aria-hidden="true"></div>
+                    <div class="slot-winline" aria-hidden="true"></div>
+                </div>
+                <div id="slotBanner" class="slot-banner" role="status" aria-live="polite" aria-atomic="true">按下 SPIN 開始轉動</div>
+                <div class="slot-balance">
+                    <span>金幣 <strong id="slotGold">0</strong></span>
+                    <span>賭場代幣 <strong id="slotChips">0</strong></span>
+                </div>
+                <details class="slot-paytable">
+                    <summary>賠率表</summary>
+                    <table><tbody id="slotPaytable"></tbody></table>
+                    <p>以金幣下注,中獎支付「下注額 × 倍數」的賭場代幣 (含本金)。下注額由機台決定:一樓 10,000、二樓 30,000、三樓 50,000。順子:左到右連續遞增或遞減,例如 3-4-5、6-5-4;符文不算數字,不能組成順子。對子:恰好兩個相同,一對符文也算。</p>
+                </details>
+            </div>
+            <div class="slot-controls">
+                <!-- 下注額由機台 (樓層) 決定,玩家不能選 -->
+                <div class="slot-stake">
+                    <span class="slot-label">每轉下注 (金幣)</span>
+                    <strong id="slotStake">10,000</strong>
+                    <span id="slotFloor" class="slot-floor">一樓</span>
+                </div>
+                <button id="slotSpin" class="slot-spin" type="button">SPIN<small id="slotSpinHint">下注 10,000</small></button>
+                <button id="slotAuto" class="slot-auto" type="button" role="switch" aria-checked="false">
+                    <span>自動轉動</span>
+                    <span class="slot-auto-state" id="slotAutoState">關</span>
+                    <span class="slot-switch" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+    </section>
+    <!-- 賭桌 (輪盤 / 哥布林二十一點 / 矮人高低骰):伺服器送 { type: 'casino', action: 'open' } 時顯示,data-game 決定主題與舞台 -->
+    <section id="casinoPanel" role="dialog" aria-labelledby="casinoTitle" hidden>
+        <header class="casino-header">
+            <div>
+                <h2 id="casinoTitle"></h2>
+                <p id="casinoDealer" class="casino-dealer"></p>
+            </div>
+            <button id="casinoClose" class="casino-close" type="button" aria-label="離開賭桌">×</button>
+        </header>
+        <div class="casino-body">
+            <div class="casino-main">
+                <div id="casinoStage" class="casino-stage" aria-hidden="true"></div>
+                <div id="casinoBanner" class="casino-banner" role="status" aria-live="polite" aria-atomic="true"></div>
+                <div class="casino-balance">
+                    <span>金幣 <strong id="casinoGold">0</strong></span>
+                    <span>賭場代幣 <strong id="casinoChips">0</strong></span>
+                </div>
+                <details class="casino-paytable">
+                    <summary>賠率表</summary>
+                    <table><tbody id="casinoPaytable"></tbody></table>
+                    <p id="casinoNote"></p>
+                </details>
+            </div>
+            <div class="casino-controls">
+                <span id="casinoOptionLabel" class="casino-label">押注</span>
+                <div id="casinoOptions" class="casino-options" role="radiogroup" aria-labelledby="casinoOptionLabel"></div>
+                <label id="casinoNumberRow" class="casino-number" hidden>號碼
+                    <input id="casinoNumber" type="number" min="0" max="36" step="1" value="17" inputmode="numeric">
+                </label>
+                <button id="casinoPlay" class="casino-play" type="button"><span id="casinoPlayText">下注</span><small id="casinoPlayHint"></small></button>
+                <button id="casinoAuto" class="casino-auto" type="button" role="switch" aria-checked="false">
+                    <span>自動下注</span>
+                    <span class="casino-auto-state" id="casinoAutoState">關</span>
+                    <span class="casino-switch" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+    </section>
+    <!-- 英雄額外屬性點數 (英雄聖殿廣場的英靈導師,train 指令):伺服器送 { type: 'heroAttr', action: 'open' } 時顯示。一次性分配,屬性列由 hero.js 產生 -->
+    <section id="heroAttrPanel" role="dialog" aria-labelledby="heroAttrTitle" aria-describedby="heroAttrNote" hidden>
+        <header class="hero-attr-header">
+            <div>
+                <h2 id="heroAttrTitle">英靈的饋贈</h2>
+                <p class="hero-attr-sub">英靈導師賜予新英雄的力量</p>
+            </div>
+            <button id="heroAttrClose" class="hero-attr-close" type="button" aria-label="關閉屬性分配">×</button>
+        </header>
+        <div class="hero-attr-points" role="status" aria-live="polite">
+            <span>剩餘點數</span>
+            <strong id="heroAttrRemain">6</strong>
+            <span class="hero-attr-total">/ <span id="heroAttrTotal">6</span></span>
+        </div>
+        <ul id="heroAttrList" class="hero-attr-list"></ul>
+        <p id="heroAttrNote" class="hero-attr-note">每點選一次「+」增加 1 點。英靈之力只能分配一次,確認後無法更改。</p>
+        <div id="heroAttrBanner" class="hero-attr-banner" role="alert" hidden></div>
+        <div class="hero-attr-actions">
+            <button id="heroAttrReset" class="hero-attr-reset" type="button">重新分配</button>
+            <button id="heroAttrConfirm" class="hero-attr-confirm" type="button" disabled>確認分配</button>
+        </div>
+    </section>
+    <!-- 城鎮地圖:查看 / 使用地圖物品時伺服器送 { type: 'areaMap' } 後顯示 (areamap.js);可縮放、拖曳,玩家在該區域時標出目前位置 -->
+    <section id="areaMapPanel" role="dialog" aria-labelledby="areaMapTitle" hidden>
+        <header class="am-header">
+            <h2 id="areaMapTitle">地圖</h2>
+            <div class="am-tools">
+                <button id="areaMapZoomOut" class="am-btn" type="button" aria-label="縮小地圖">−</button>
+                <button id="areaMapFit" class="am-btn am-btn-text" type="button">全圖</button>
+                <button id="areaMapZoomIn" class="am-btn" type="button" aria-label="放大地圖">+</button>
+                <button id="areaMapClose" class="am-btn" type="button" aria-label="收起地圖">×</button>
+            </div>
+        </header>
+        <div id="areaMapViewport" class="am-viewport" tabindex="0" aria-label="地圖,可拖曳移動">
+            <div id="areaMapCanvas" class="am-canvas"></div>
+        </div>
+        <p id="areaMapHint" class="am-hint">拖曳移動地圖;用 + / − 縮放</p>
+    </section>
+    <!-- 登入 / 創角畫面:伺服器連線時送 { type: 'auth', action: 'show' } 後顯示 (auth.js)。
+         「改用文字模式」關閉畫面後,仍可在輸入框照原本的文字流程登入 -->
+    <section id="authPanel" role="dialog" aria-modal="true" aria-labelledby="authTitle" hidden>
+        <div class="auth-card">
+            <header class="auth-header">
+                <!-- 橫幅與分享預覽圖 (og:image) 同一張;圖上已有遊戲名稱。創角時裁成較矮的橫條,留空間給表單 -->
+                <img src="./assets/images/og-image.jpg" alt="瑪爾斯群英傳:起源 Mars: Origin" class="auth-banner" width="1200" height="630" fetchpriority="high">
+                <h2 id="authTitle">登入</h2>
+            </header>
+
+            <form id="authLoginForm" class="auth-view" novalidate>
+                <div class="auth-field">
+                    <label for="authLoginName">帳號</label>
+                    <input id="authLoginName" type="text" autocomplete="username" maxlength="10" autocapitalize="off" spellcheck="false" aria-describedby="authLoginNameHint">
+                    <p id="authLoginNameHint" class="auth-hint"></p>
+                </div>
+                <div class="auth-field">
+                    <label for="authLoginPassword">密碼</label>
+                    <input id="authLoginPassword" type="password" autocomplete="current-password" maxlength="10" aria-describedby="authLoginPasswordHint">
+                    <p id="authLoginPasswordHint" class="auth-hint"></p>
+                </div>
+                <label class="auth-check"><input id="authRemember" type="checkbox">記住我 (下次自動登入)</label>
+                <p id="authLoginError" class="auth-error" role="alert" hidden></p>
+                <button id="authLoginSubmit" class="auth-primary" type="submit">登入</button>
+                <button id="authToCreate" class="auth-secondary" type="button">建立新角色</button>
+                <button id="authToForgot" class="auth-link" type="button">忘記密碼?</button>
+                <button class="auth-link" type="button" data-auth-text>改用文字模式</button>
+            </form>
+
+            <!-- 忘記密碼:輸入角色 ID 與信箱,伺服器寄臨時密碼到「已驗證」的信箱。回覆不透露帳號是否存在 -->
+            <form id="authForgotForm" class="auth-view" novalidate hidden>
+                <p class="auth-hint">輸入角色 ID 與建立角色時登記的信箱。信箱需已完成驗證，臨時密碼會寄到該信箱，15 分鐘內有效。</p>
+                <div class="auth-field">
+                    <label for="authForgotName">角色 ID</label>
+                    <input id="authForgotName" type="text" autocomplete="username" maxlength="10" autocapitalize="off" spellcheck="false" aria-describedby="authForgotNameHint">
+                    <p id="authForgotNameHint" class="auth-hint"></p>
+                </div>
+                <div class="auth-field">
+                    <label for="authForgotMail">信箱</label>
+                    <input id="authForgotMail" type="email" autocomplete="email" inputmode="email" aria-describedby="authForgotMailHint">
+                    <p id="authForgotMailHint" class="auth-hint"></p>
+                </div>
+                <p id="authForgotError" class="auth-error" role="alert" hidden></p>
+                <p id="authForgotResult" class="auth-notice" role="status" hidden></p>
+                <button id="authForgotSubmit" class="auth-primary" type="submit">寄送臨時密碼</button>
+                <button id="authForgotBack" class="auth-link" type="button">返回登入</button>
+            </form>
+
+            <form id="authCreateForm" class="auth-view" novalidate hidden>
+                <ol class="auth-steps" aria-label="創角步驟">
+                    <li data-step="1">帳號</li>
+                    <li data-step="2">名字</li>
+                    <li data-step="3">職業</li>
+                    <li data-step="4">屬性</li>
+                    <li data-step="5">確認</li>
+                </ol>
+
+                <fieldset class="auth-step" data-step="1">
+                    <legend>帳號與密碼</legend>
+                    <div class="auth-field">
+                        <label for="authName">帳號</label>
+                        <input id="authName" type="text" autocomplete="username" maxlength="10" autocapitalize="off" spellcheck="false" aria-describedby="authNameHint">
+                        <p id="authNameHint" class="auth-hint"></p>
+                    </div>
+                    <div class="auth-field">
+                        <label for="authPassword">密碼</label>
+                        <input id="authPassword" type="password" autocomplete="new-password" maxlength="10" aria-describedby="authPasswordHint">
+                        <p id="authPasswordHint" class="auth-hint"></p>
+                    </div>
+                    <div class="auth-field">
+                        <label for="authPassword2">再輸入一次密碼</label>
+                        <input id="authPassword2" type="password" autocomplete="new-password" maxlength="10" aria-describedby="authPassword2Hint">
+                        <p id="authPassword2Hint" class="auth-hint"></p>
+                    </div>
+                </fieldset>
+
+                <fieldset class="auth-step" data-step="2" hidden>
+                    <legend>角色名字與性別</legend>
+                    <div class="auth-field">
+                        <label for="authCnName">中文名字</label>
+                        <input id="authCnName" type="text" maxlength="8" autocomplete="off" aria-describedby="authCnNameHint">
+                        <p id="authCnNameHint" class="auth-hint"></p>
+                    </div>
+                    <div class="auth-field">
+                        <span id="authGenderLabel" class="auth-label">性別</span>
+                        <div id="authGenders" class="auth-choices" role="radiogroup" aria-labelledby="authGenderLabel" aria-describedby="authGenderHint"></div>
+                        <p id="authGenderHint" class="auth-hint"></p>
+                    </div>
+                </fieldset>
+
+                <fieldset class="auth-step" data-step="3" hidden>
+                    <legend>選擇職業</legend>
+                    <div id="authClasses" class="auth-classes" role="radiogroup" aria-label="職業" aria-describedby="authClassHint"></div>
+                    <p id="authClassHint" class="auth-hint"></p>
+                </fieldset>
+
+                <fieldset class="auth-step" data-step="4" hidden>
+                    <legend>分配屬性點數</legend>
+                    <div class="auth-points" role="status" aria-live="polite">
+                        <span>剩餘點數</span><strong id="authAttrRemain">30</strong><span>/ <span id="authAttrTotal">30</span></span>
+                    </div>
+                    <ul id="authAttrList" class="auth-attr-list"></ul>
+                    <p id="authAttrHint" class="auth-hint">每項基礎 8 點;49 級以前屬性最多 30 點。強烈建議體格至少 22 點。</p>
+                </fieldset>
+
+                <fieldset class="auth-step" data-step="5" hidden>
+                    <legend>信箱與確認</legend>
+                    <div class="auth-field">
+                        <label for="authMail">信箱</label>
+                        <input id="authMail" type="email" autocomplete="email" inputmode="email" aria-describedby="authMailHint">
+                        <p id="authMailHint" class="auth-hint"></p>
+                    </div>
+                    <dl id="authSummary" class="auth-summary"></dl>
+                    <label class="auth-check"><input id="authCreateRemember" type="checkbox">記住我 (下次自動登入)</label>
+                </fieldset>
+
+                <p id="authCreateError" class="auth-error" role="alert" hidden></p>
+                <div class="auth-nav">
+                    <button id="authPrev" class="auth-secondary" type="button">上一步</button>
+                    <button id="authNext" class="auth-primary" type="submit">下一步</button>
+                </div>
+                <button id="authToLogin" class="auth-link" type="button">已經有角色?返回登入</button>
+            </form>
+        </div>
+    </section>
+
+    <script src="./assets/js/game.js?v=20261122g"></script>
+    <script src="./assets/js/casino.js?v=20261121b"></script>
+    <script src="./assets/js/hero.js?v=20261121"></script>
+    <script src="./assets/js/auth.js?v=20261122d"></script>
+    <script src="./assets/js/areamap.js?v=20261122"></script>
+    <!-- 所有腳本載入後才連線,收到的訊息才找得到對應的處理函式 -->
+    <script>connect();</script>
 </body>
 </html>

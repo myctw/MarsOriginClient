@@ -1,0 +1,314 @@
+/* 奇幻主題:body.theme-dark-fantasy。由 index.html 載入,需在 game.css 之後 */
+/* ===== 奇幻主題 (theme-dark-fantasy) ===== */
+body.theme-dark-fantasy {
+    --df-bg: #111318;
+    --df-surface: #181b21;
+    --df-panel: #20232b;
+    --df-elevated: #292d35;
+    --df-border: #49402f;
+    --df-border-soft: #332f28;
+    --df-text: #e6dfcf;
+    --df-secondary: #aaa393;
+    --df-muted: #777366;
+    --df-gold: #c5a15d;
+    --df-gold-highlight: #e0bd79;
+    --df-hp: #b94b4b;
+    --df-mana: #4778bd;
+    --df-move: #b58b43;
+    --df-success: #668b65;
+    --df-danger: #a94343;
+    --df-font-ui: "Segoe UI", "Noto Sans CJK TC", sans-serif;
+    --df-font-title: Georgia, "Noto Serif CJK TC", serif;
+    --df-font-game: "Noto Sans Mono CJK", "Cascadia Mono", Consolas, monospace;
+    background: var(--df-bg);
+    color: var(--df-text);
+    color-scheme: dark;
+    font-family: var(--df-font-ui);
+    font-size: 18px;
+    overflow: hidden;
+}
+body.theme-dark-fantasy .d-flex.flex-column.h-100 { min-height: 0; }
+body.theme-dark-fantasy #output-container {
+    margin-right: var(--right-panel-width);
+    padding: 14px 16px 0;
+    background: var(--df-bg);
+    border-right: 1px solid var(--df-border-soft);
+}
+body.theme-dark-fantasy #output,
+body.theme-dark-fantasy #output-top {
+    padding: 18px 22px;
+    background: var(--df-surface);
+    color: var(--df-text);
+    font-family: var(--df-font-game);
+    font-size: 16px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    scrollbar-color: var(--df-border) var(--df-surface);
+}
+body.theme-dark-fantasy #output {
+    border: 1px solid var(--df-border-soft);
+    border-bottom: 0;
+    box-shadow: inset 0 1px 5px #0008;
+}
+body.theme-dark-fantasy #output-top {
+    color: var(--df-secondary);
+    border: 1px solid var(--df-border-soft);
+}
+body.theme-dark-fantasy .split-view #output-top { border-bottom-color: var(--df-border); }
+body.theme-dark-fantasy .bottom-container {
+    gap: 8px;
+    padding: 0 0 12px;
+    align-items: stretch;
+    background: linear-gradient(180deg, transparent, var(--df-bg) 14px);
+}
+body.theme-dark-fantasy .left-panel,
+body.theme-dark-fantasy #chatArea,
+body.theme-dark-fantasy #statusBar,
+body.theme-dark-fantasy #targetInfoBar,
+body.theme-dark-fantasy #inputArea {
+    min-width: 0;
+    color: var(--df-text);
+    /* !important 也一併清掉 diablo 主題的 background-image,維持原本外觀 */
+    background: var(--df-panel) !important;
+    border: 1px solid var(--df-border);
+    box-shadow: inset 0 1px 0 #ffffff08, 0 4px 14px #0005;
+}
+body.theme-dark-fantasy #targetInfoBar {
+    min-height: 38px;
+    padding: 6px 12px;
+    gap: 5px;
+    font-family: var(--df-font-ui);
+    font-size: 14px;
+}
+body.theme-dark-fantasy #targetInfoBar .target-arrow-icon,
+body.theme-dark-fantasy #targetTargetName,
+body.theme-dark-fantasy #targetTargetHp { color: var(--df-gold-highlight); }
+body.theme-dark-fantasy #targetName,
+body.theme-dark-fantasy #targetHp { color: var(--df-hp); }
+body.theme-dark-fantasy #statusBar {
+    gap: 8px 14px !important;
+    padding: 9px 12px;
+    border-top: 0;
+    flex: 1 1 auto;
+    align-content: center;
+}
+body.theme-dark-fantasy .status-hp,
+body.theme-dark-fantasy .status-mana,
+body.theme-dark-fantasy .status-move,
+body.theme-dark-fantasy .status-level,
+body.theme-dark-fantasy .status-gold,
+body.theme-dark-fantasy .status-combat-stat {
+    color: var(--df-secondary);
+    align-items: center;
+    white-space: nowrap;
+    font-size: 14px;
+}
+body.theme-dark-fantasy .status-combat { display: flex !important; flex-wrap: wrap; }
+body.theme-dark-fantasy .status-hp .status-icon { color: var(--df-hp); }
+body.theme-dark-fantasy .status-mana .status-icon { color: var(--df-mana); }
+body.theme-dark-fantasy .status-move .status-icon { color: var(--df-move); }
+body.theme-dark-fantasy .status-level .status-icon,
+body.theme-dark-fantasy .status-gold .status-icon { color: var(--df-gold); }
+body.theme-dark-fantasy .status-combat-stat .status-icon { color: var(--df-gold-highlight); }
+body.theme-dark-fantasy .fixed-width {
+    color: var(--df-text);
+    font-family: var(--df-font-game);
+    font-variant-numeric: tabular-nums;
+}
+body.theme-dark-fantasy .progress {
+    height: 5px;
+    margin: 4px 0 0;
+    overflow: hidden;
+    background: var(--df-bg);
+    border: 1px solid var(--df-border-soft);
+}
+body.theme-dark-fantasy .status-hp .progress-bar { background-color: var(--df-hp) !important; }
+body.theme-dark-fantasy .status-mana .progress-bar { background-color: var(--df-mana) !important; }
+body.theme-dark-fantasy .status-move .progress-bar { background-color: var(--df-move) !important; }
+body.theme-dark-fantasy .status-effect {
+    padding: 3px 7px;
+    color: var(--df-muted);
+    background: var(--df-bg);
+    border: 1px solid var(--df-border-soft);
+    font-size: 13px;
+    white-space: nowrap;
+}
+body.theme-dark-fantasy .status-effect.poison.active {
+    color: var(--df-success);
+    border-color: var(--df-success);
+}
+body.theme-dark-fantasy .status-effect.burn.active,
+body.theme-dark-fantasy .status-effect.bleed.active {
+    color: var(--df-hp);
+    border-color: var(--df-danger);
+}
+body.theme-dark-fantasy #inputArea { gap: 8px !important; padding: 8px; border-top: 0; }
+body.theme-dark-fantasy #inputBox,
+body.theme-dark-fantasy #themeColor {
+    min-height: 38px;
+    color: var(--df-text);
+    background-color: var(--df-bg);
+    border: 1px solid var(--df-border);
+    border-radius: 2px;
+    font-family: var(--df-font-game);
+    font-size: 18px;
+    box-shadow: inset 0 1px 4px #0008;
+}
+body.theme-dark-fantasy #inputBox::placeholder { color: var(--df-muted); }
+body.theme-dark-fantasy #inputBox:focus,
+body.theme-dark-fantasy #themeColor:focus {
+    border-color: var(--df-gold);
+    box-shadow: 0 0 0 2px #c5a15d33, inset 0 1px 4px #0008;
+}
+body.theme-dark-fantasy #themeSelector {
+    color: var(--df-text);
+    background: var(--df-elevated);
+    border-color: var(--df-border);
+}
+body.theme-dark-fantasy .btn,
+body.theme-dark-fantasy .tab-btn,
+body.theme-dark-fantasy .numpad-btn {
+    color: var(--df-text);
+    background: var(--df-elevated);
+    border: 1px solid var(--df-border);
+    border-radius: 2px;
+    font-family: var(--df-font-ui);
+    font-size: 18px;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+body.theme-dark-fantasy #sendButton {
+    min-height: 38px;
+    color: #17140e;
+    background: var(--df-gold);
+    border-color: var(--df-gold-highlight);
+    font-size: 16px;
+    font-weight: 700;
+}
+body.theme-dark-fantasy #sendButton:hover,
+body.theme-dark-fantasy #sendButton:focus-visible { background: var(--df-gold-highlight); }
+body.theme-dark-fantasy .btn:hover,
+body.theme-dark-fantasy .tab-btn:hover,
+body.theme-dark-fantasy .numpad-btn:hover {
+    color: var(--df-gold-highlight);
+    background: #34332f;
+    border-color: var(--df-gold);
+}
+body.theme-dark-fantasy .btn:active,
+body.theme-dark-fantasy .tab-btn:active,
+body.theme-dark-fantasy .numpad-btn:active {
+    background: #121419;
+    box-shadow: inset 0 2px 5px #0009;
+}
+body.theme-dark-fantasy .btn:disabled,
+body.theme-dark-fantasy .tab-btn:disabled,
+body.theme-dark-fantasy .numpad-btn:disabled {
+    color: var(--df-muted);
+    background: var(--df-surface);
+    border-color: var(--df-border-soft);
+    cursor: not-allowed;
+}
+body.theme-dark-fantasy :focus-visible { outline: 2px solid var(--df-gold-highlight); outline-offset: 2px; }
+body.theme-dark-fantasy #chatArea {
+    padding: 12px;
+    color: var(--df-secondary);
+    font-family: var(--df-font-game);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    scrollbar-color: var(--df-border) var(--df-panel);
+}
+body.theme-dark-fantasy #chatArea p {
+    margin: 0 0 8px;
+    padding-left: 9px;
+    border-left: 2px solid var(--df-border);
+}
+body.theme-dark-fantasy .right-panel {
+    display: flex;
+    gap: 10px;
+    padding: 14px;
+    color: var(--df-text);
+    background: var(--df-surface);
+    border-left: 1px solid var(--df-border);
+    box-shadow: -8px 0 24px #0005;
+}
+body.theme-dark-fantasy .tab-buttons {
+    gap: 6px;
+    margin: 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--df-border);
+}
+body.theme-dark-fantasy .tab-btn {
+    min-height: 38px;
+    color: var(--df-secondary);
+    background: var(--df-panel);
+    font-family: var(--df-font-title);
+    font-size: 16px;
+}
+body.theme-dark-fantasy .tab-btn.active {
+    color: var(--df-gold-highlight);
+    background: var(--df-elevated);
+    border-color: var(--df-gold);
+    border-bottom: 2px solid var(--df-gold);
+}
+body.theme-dark-fantasy .equipment-panel,
+body.theme-dark-fantasy .inventory-panel {
+    padding: 8px;
+    background: var(--df-panel);
+    border: 1px solid var(--df-border-soft);
+    border-radius: 0;
+}
+body.theme-dark-fantasy .equipment-list,
+body.theme-dark-fantasy .inventory-list {
+    height: calc(100vh - 105px);
+    padding: 8px;
+    color: var(--df-text);
+    font-family: var(--df-font-game);
+    font-size: 14px;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+    scrollbar-color: var(--df-border) var(--df-panel);
+}
+body.theme-dark-fantasy .mobile-numpad {
+    opacity: 1;
+    padding: 5px;
+    background: #181b21d9;
+    border: 1px solid var(--df-border);
+}
+body.theme-dark-fantasy .numpad-row { gap: 3px; }
+body.theme-dark-fantasy .numpad-btn {
+    width: 42px;
+    height: 42px;
+    color: var(--df-gold-highlight);
+    background: #20232bdd;
+    font-size: 16px;
+}
+body.theme-dark-fantasy #fleeBtn { color: #f0d7d0; border-color: var(--df-danger); }
+body.theme-dark-fantasy #invbtn { color: var(--df-gold-highlight); }
+body.theme-dark-fantasy ::selection { color: var(--df-bg); background: var(--df-gold); }
+body.theme-dark-fantasy ::-webkit-scrollbar { width: 10px; height: 10px; }
+body.theme-dark-fantasy ::-webkit-scrollbar-track { background: var(--df-bg); }
+body.theme-dark-fantasy ::-webkit-scrollbar-thumb { background: var(--df-border); border: 2px solid var(--df-bg); }
+body.theme-dark-fantasy .right-panel-resizer:hover::before,
+body.theme-dark-fantasy.is-resizing-right-panel .right-panel-resizer::before { background: var(--df-gold); }
+body.theme-dark-fantasy .right-panel-resizer::after { border-color: var(--df-gold); }
+@media (max-width: 1100px) {
+    body.theme-dark-fantasy #output-container { margin-right: 0; }
+    body.theme-dark-fantasy .right-panel { display: none; }
+}
+@media (max-width: 768px) {
+    body.theme-dark-fantasy #output-container { padding: 8px 8px 0; }
+    body.theme-dark-fantasy #output,
+    body.theme-dark-fantasy #output-top { padding: 12px; font-size: 15px; }
+    body.theme-dark-fantasy .bottom-container { gap: 6px; padding: 0 0 8px; }
+    body.theme-dark-fantasy #statusBar { gap: 7px 10px !important; padding: 8px; flex-wrap: wrap !important; }
+    body.theme-dark-fantasy .status-effects { display: flex !important; flex-wrap: wrap; gap: 4px !important; }
+    body.theme-dark-fantasy .status-label { display: inline !important; }
+    body.theme-dark-fantasy #inputArea { flex-wrap: wrap; }
+    body.theme-dark-fantasy #inputBox { flex: 1 1 45%; }
+}
+@media (max-width: 420px) {
+    body.theme-dark-fantasy .status-hp,
+    body.theme-dark-fantasy .status-mana,
+    body.theme-dark-fantasy .status-move { flex: 1 1 30%; }
+}

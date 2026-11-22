@@ -1,0 +1,737 @@
+/* 符文轉輪機 (#slotPanel) 與賭桌 (#casinoPanel)。由 index.html 載入 */
+/* ===== 符文轉輪機 (slot):黃銅機框 + 羊皮紙轉輪,色票獨立,不受主題切換影響 ===== */
+#slotPanel {
+    --slot-bg: #17110d;
+    --slot-surface: #221912;
+    --slot-brass: #b8893e;
+    --slot-brass-hi: #f0d48a;
+    --slot-brass-lo: #6b4a1c;
+    --slot-text: #eadfc8;
+    --slot-muted: #b9ab90;
+    --slot-reel: #f3e6c4;
+    --slot-ink: #2a1a0c;
+    --slot-ruby: #a3221a;
+    --slot-ruby-hi: #d8462f;
+    --slot-win: #ffd76a;
+    --slot-danger: #ff8a7a;
+    --slot-rune: #b3261c;
+    --slot-rune-gem: #e8b04a;
+    --slot-rune-glow: #ff5a3a88;
+    --slot-backdrop: radial-gradient(ellipse at 50% -20%, #5a3a1a66, transparent 60%);
+    --slot-cell-h: 64px;
+    --slot-ease-stop: cubic-bezier(.18, .72, .26, 1.04);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 1050;
+    width: min(620px, calc(100vw - 16px));
+    max-height: calc(100dvh - 16px);
+    overflow-y: auto;
+    padding: 14px 16px 16px;
+    color: var(--slot-text);
+    background: var(--slot-backdrop), var(--slot-bg);
+    border: 3px solid var(--slot-brass);
+    border-radius: 14px;
+    box-shadow: 0 0 0 2px var(--slot-brass-lo), 0 16px 40px #000c, inset 0 0 28px #00000099;
+    font-family: Georgia, "Noto Serif CJK TC", serif;
+    transform: translate(-50%, -50%);
+}
+#slotPanel, #slotPanel *, #slotPanel *::before, #slotPanel *::after { box-sizing: border-box; }
+#slotPanel[hidden] { display: none; }
+/* 二樓 鎏金:翡翠天鵝絨、亮金框、象牙轉輪、紅寶石符文 */
+#slotPanel[data-tier="2"] {
+    --slot-bg: #0d1813;
+    --slot-surface: #14241b;
+    --slot-brass: #d4a743;
+    --slot-brass-hi: #ffe39a;
+    --slot-brass-lo: #6e5420;
+    --slot-text: #f1e9d2;
+    --slot-muted: #c4b994;
+    --slot-reel: #f8f0dc;
+    --slot-rune: #c0182f;
+    --slot-rune-gem: #ffd36b;
+    --slot-rune-glow: #ff3a5a88;
+    --slot-backdrop:
+        radial-gradient(ellipse at 50% -20%, #2f7a5266, transparent 60%),
+        repeating-linear-gradient(45deg, #ffffff05 0 2px, transparent 2px 10px);
+}
+/* 三樓 秘銀星辰:黑曜石、秘銀框、水晶轉輪、龍心紅寶石符文,背景點綴星光 */
+#slotPanel[data-tier="3"] {
+    --slot-bg: #0b0a14;
+    --slot-surface: #161427;
+    --slot-brass: #aeb9cf;
+    --slot-brass-hi: #f1f5ff;
+    --slot-brass-lo: #444a63;
+    --slot-text: #ece9f7;
+    --slot-muted: #b3b1c9;
+    --slot-reel: #e6ebf7;
+    --slot-ink: #1b1631;
+    --slot-ruby: #b0183a;
+    --slot-ruby-hi: #ff4d6d;
+    --slot-rune: #d1123a;
+    --slot-rune-gem: #ffe08a;
+    --slot-rune-glow: #ff2a5aaa;
+    --slot-backdrop:
+        radial-gradient(circle at 12% 18%, #ffffffaa 0 1px, transparent 2px),
+        radial-gradient(circle at 78% 12%, #ffffff88 0 1px, transparent 2px),
+        radial-gradient(circle at 90% 62%, #ffffff77 0 1px, transparent 2px),
+        radial-gradient(circle at 34% 8%, #c9d6ff99 0 1px, transparent 2px),
+        radial-gradient(ellipse at 50% -20%, #5b3fa066, transparent 60%);
+    box-shadow: 0 0 0 2px var(--slot-brass-lo), 0 0 24px #7a5cff44, 0 16px 40px #000c, inset 0 0 28px #00000099;
+}
+#slotPanel.is-jackpot { animation: slot-jackpot-flash .45s ease-in-out 4; }
+@keyframes slot-jackpot-flash {
+    50% { box-shadow: 0 0 0 2px var(--slot-brass-lo), 0 0 36px var(--slot-win), inset 0 0 28px #00000099; }
+}
+.slot-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.slot-header h2 {
+    margin: 0;
+    color: var(--slot-brass-hi);
+    font-family: Cinzel, Georgia, "Noto Serif CJK TC", serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: .08em;
+}
+.slot-close {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    padding: 0;
+    color: var(--slot-text);
+    font-size: 24px;
+    line-height: 1;
+    background: transparent;
+    border: 1px solid var(--slot-brass-lo);
+    border-radius: 8px;
+    cursor: pointer;
+}
+.slot-close:hover { background: #ffffff14; }
+.slot-body { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 14px; }
+
+/* 機台:三個轉輪視窗,中央一條金色中獎線 */
+.slot-machine { min-width: 0; }
+.slot-window {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 10px;
+    background: linear-gradient(180deg, var(--slot-brass-lo), #3b2a14 50%, var(--slot-brass-lo));
+    border: 2px solid var(--slot-brass);
+    border-radius: 10px;
+    box-shadow: inset 0 2px 8px #000a;
+}
+.slot-reel {
+    position: relative;
+    height: calc(var(--slot-cell-h) * 3);
+    overflow: hidden;
+    background: var(--slot-reel);
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px #00000055;
+}
+/* 上下兩格加深,讓視線集中在中央那一列 */
+.slot-reel::after {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    content: "";
+    background: linear-gradient(180deg, #2a1a0c99 0%, transparent 34%, transparent 66%, #2a1a0c99 100%);
+}
+.slot-strip { will-change: transform; }
+.slot-cell {
+    display: grid;
+    height: var(--slot-cell-h);
+    place-items: center;
+    color: var(--slot-ink);
+    font-family: Cinzel, Georgia, serif;
+    font-size: 40px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.slot-rune { width: calc(var(--slot-cell-h) * .66); height: calc(var(--slot-cell-h) * .8); overflow: visible; filter: drop-shadow(0 0 3px var(--slot-rune-glow)); }
+.slot-rune-stroke { fill: none; stroke: var(--slot-rune); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.slot-rune-gem { fill: var(--slot-rune-gem); stroke: var(--slot-rune); stroke-width: 2; stroke-linejoin: round; }
+.slot-cell.is-hit {
+    color: var(--slot-ink);
+    background: radial-gradient(circle, #ffe9a8 0%, var(--slot-win) 70%);
+    animation: slot-hit-pop .5s var(--slot-ease-stop);
+}
+@keyframes slot-hit-pop {
+    0% { transform: scale(.85); }
+    60% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+}
+.slot-payline {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    left: 4px;
+    height: 2px;
+    pointer-events: none;
+    background: var(--slot-brass-hi);
+    opacity: .45;
+    transform: translateY(-50%);
+}
+/* 中獎線:從第一個中獎轉輪畫到最後一個 (left / width 由 JS 依轉輪位置設定,scaleX 畫線動畫) */
+.slot-winline {
+    position: absolute;
+    top: 50%;
+    height: 5px;
+    margin-top: -2.5px;
+    pointer-events: none;
+    background: var(--slot-ruby-hi);
+    border-radius: 3px;
+    box-shadow: 0 0 6px var(--slot-win), 0 0 2px #000;
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+}
+.slot-winline.is-on { opacity: 1; animation: slot-draw-line .45s ease-out forwards; }
+@keyframes slot-draw-line { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.slot-banner {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    padding: 6px 10px;
+    color: var(--slot-muted);
+    font-size: 16px;
+    text-align: center;
+    background: var(--slot-surface);
+    border: 1px solid var(--slot-brass-lo);
+    border-radius: 8px;
+}
+.slot-banner.is-win { color: var(--slot-win); font-weight: 700; border-color: var(--slot-brass); }
+.slot-banner.is-jackpot { color: var(--slot-ink); background: linear-gradient(90deg, var(--slot-brass), var(--slot-win), var(--slot-brass)); }
+.slot-banner.is-error { color: var(--slot-danger); }
+.slot-balance { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; color: var(--slot-muted); font-size: 14px; }
+.slot-balance strong { color: var(--slot-text); font-variant-numeric: tabular-nums; }
+.slot-paytable { margin-top: 8px; font-size: 14px; }
+.slot-paytable summary { min-height: 32px; padding: 6px 0; color: var(--slot-brass-hi); cursor: pointer; }
+.slot-paytable table { width: 100%; border-collapse: collapse; }
+.slot-paytable td { padding: 4px 6px; border-top: 1px solid var(--slot-brass-lo); }
+.slot-paytable td:last-child { color: var(--slot-win); text-align: right; font-variant-numeric: tabular-nums; }
+.slot-paytable p { margin: 6px 0 0; color: var(--slot-muted); font-size: 13px; line-height: 1.5; }
+
+/* 右側控制區:下注金額、SPIN、自動轉動 */
+.slot-controls { display: flex; flex-direction: column; gap: 10px; }
+.slot-label { color: var(--slot-muted); font-size: 14px; }
+.slot-stake {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 10px 8px;
+    background: var(--slot-surface);
+    border: 1px solid var(--slot-brass);
+    border-radius: 8px;
+    box-shadow: inset 0 0 12px #00000066;
+}
+.slot-stake strong {
+    color: var(--slot-brass-hi);
+    font-family: Cinzel, Georgia, serif;
+    font-size: 26px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+}
+.slot-floor { color: var(--slot-muted); font-size: 13px; }
+.slot-spin:focus-visible,
+.slot-auto:focus-visible,
+.slot-close:focus-visible { outline: 3px solid var(--slot-win); outline-offset: 2px; }
+.slot-spin {
+    min-height: 72px;
+    color: #fff8e6;
+    font-family: Cinzel, Georgia, serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    background: linear-gradient(180deg, var(--slot-ruby-hi), var(--slot-ruby) 60%, #6e140e);
+    border: 2px solid var(--slot-brass-hi);
+    border-radius: 12px;
+    box-shadow: 0 4px 0 #4a0d08, 0 6px 12px #000a;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform .1s, box-shadow .1s, filter .15s;
+}
+.slot-spin:hover:not(:disabled) { filter: brightness(1.1); }
+.slot-spin:active:not(:disabled) { box-shadow: 0 1px 0 #4a0d08, 0 2px 6px #000a; transform: translateY(3px); }
+.slot-spin:disabled { cursor: wait; filter: grayscale(.5) brightness(.7); }
+.slot-spin small { display: block; font-family: Georgia, "Noto Serif CJK TC", serif; font-size: 13px; font-weight: 400; letter-spacing: 0; }
+.slot-auto {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
+    color: var(--slot-text);
+    font-size: 15px;
+    background: var(--slot-surface);
+    border: 1px solid var(--slot-brass-lo);
+    border-radius: 8px;
+    cursor: pointer;
+}
+.slot-switch {
+    position: relative;
+    flex: none;
+    width: 44px;
+    height: 24px;
+    background: #3a2c20;
+    border: 1px solid var(--slot-brass-lo);
+    border-radius: 12px;
+    transition: background-color .2s;
+}
+.slot-switch::after {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    content: "";
+    background: var(--slot-muted);
+    border-radius: 50%;
+    transition: transform .2s var(--slot-ease-stop), background-color .2s;
+}
+.slot-auto[aria-checked="true"] .slot-switch { background: var(--slot-ruby); border-color: var(--slot-brass-hi); }
+.slot-auto[aria-checked="true"] .slot-switch::after { background: var(--slot-brass-hi); transform: translateX(20px); }
+.slot-auto > span:first-child { white-space: nowrap; }
+.slot-auto-state { margin-left: auto; color: var(--slot-muted); font-size: 13px; }
+
+@media (max-width: 600px) {
+    #slotPanel { --slot-cell-h: 52px; padding: 10px 12px 12px; }
+    .slot-body { grid-template-columns: 1fr; }
+    .slot-controls { display: grid; grid-template-columns: 1fr 1fr; }
+    .slot-stake { grid-column: 1 / -1; grid-template-columns: auto auto auto; align-items: baseline; justify-content: center; gap: 10px; padding: 6px 8px; }
+    .slot-stake strong { font-size: 22px; }
+    .slot-cell { font-size: 32px; }
+    .slot-spin { min-height: 56px; font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #slotPanel.is-jackpot, .slot-cell.is-hit { animation: none; }
+    .slot-winline.is-on { animation: none; transform: none; }
+    .slot-switch, .slot-switch::after, .slot-spin { transition: none; }
+}
+
+/* ===== 賭桌 (輪盤 / 哥布林二十一點 / 矮人高低骰):共用外框,data-game 切換主題與舞台 ===== */
+#casinoPanel, #casinoPanel *, #casinoPanel *::before, #casinoPanel *::after { box-sizing: border-box; }
+#casinoPanel {
+    --c-ease-stop: cubic-bezier(.12, .62, .16, 1);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 1050;
+    width: min(680px, calc(100vw - 16px));
+    max-height: calc(100dvh - 16px);
+    overflow-y: auto;
+    padding: 14px 16px 16px;
+    color: var(--c-text);
+    background: var(--c-backdrop), var(--c-bg);
+    border: 3px solid var(--c-frame);
+    border-radius: 14px;
+    box-shadow: 0 0 0 2px var(--c-frame-lo), 0 16px 40px #000c, inset 0 0 28px #000000aa;
+    font-family: Georgia, "Noto Serif CJK TC", serif;
+    transform: translate(-50%, -50%);
+}
+#casinoPanel[hidden] { display: none; }
+#casinoPanel.is-jackpot { animation: casino-jackpot-flash .45s ease-in-out 4; }
+@keyframes casino-jackpot-flash {
+    50% { box-shadow: 0 0 0 2px var(--c-frame-lo), 0 0 40px var(--c-win), inset 0 0 28px #000000aa; }
+}
+.casino-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.casino-header h2 {
+    margin: 0;
+    color: var(--c-frame-hi);
+    font-family: Cinzel, Georgia, "Noto Serif CJK TC", serif;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-shadow: 0 0 10px var(--c-glow);
+}
+.casino-dealer { margin: 2px 0 0; color: var(--c-muted); font-size: 14px; }
+.casino-close {
+    display: grid;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    padding: 0;
+    color: var(--c-text);
+    font-size: 24px;
+    line-height: 1;
+    background: transparent;
+    border: 1px solid var(--c-frame-lo);
+    border-radius: 8px;
+    cursor: pointer;
+}
+.casino-close:hover { background: #ffffff14; }
+.casino-body { display: grid; grid-template-columns: minmax(0, 1fr) 184px; gap: 14px; }
+.casino-main { min-width: 0; }
+.casino-stage {
+    position: relative;
+    min-height: 240px;
+    padding: 12px;
+    overflow: hidden;
+    background: var(--c-stage);
+    border: 2px solid var(--c-frame);
+    border-radius: 10px;
+    box-shadow: inset 0 2px 10px #000b;
+    display: grid;
+    align-content: center;
+}
+.casino-banner {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    padding: 6px 10px;
+    color: var(--c-muted);
+    font-size: 16px;
+    text-align: center;
+    background: var(--c-surface);
+    border: 1px solid var(--c-frame-lo);
+    border-radius: 8px;
+}
+.casino-banner.is-win { color: var(--c-win); font-weight: 700; border-color: var(--c-frame); }
+.casino-banner.is-jackpot { color: #1a0f05; background: linear-gradient(90deg, var(--c-frame), var(--c-win), var(--c-frame)); }
+.casino-banner.is-error { color: var(--c-danger); }
+.casino-balance { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; color: var(--c-muted); font-size: 14px; }
+.casino-balance strong { color: var(--c-text); font-variant-numeric: tabular-nums; }
+.casino-paytable { margin-top: 8px; font-size: 14px; }
+.casino-paytable summary { min-height: 32px; padding: 6px 0; color: var(--c-frame-hi); cursor: pointer; }
+.casino-paytable table { width: 100%; border-collapse: collapse; }
+.casino-paytable td { padding: 4px 6px; border-top: 1px solid var(--c-frame-lo); }
+.casino-paytable td:last-child { color: var(--c-win); text-align: right; white-space: nowrap; }
+.casino-paytable p { margin: 6px 0 0; color: var(--c-muted); font-size: 13px; line-height: 1.5; }
+
+.casino-controls { display: flex; flex-direction: column; gap: 10px; }
+.casino-label { color: var(--c-muted); font-size: 14px; }
+.casino-options { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.casino-options[data-count="1"] { display: none; }
+.casino-options[data-count="3"] { grid-template-columns: 1fr 1fr 1fr; }
+.casino-option { position: relative; }
+.casino-option.is-wide { grid-column: 1 / -1; }
+.casino-option input { position: absolute; opacity: 0; pointer-events: none; }
+.casino-option span {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    color: var(--c-text);
+    font-size: 16px;
+    background: var(--c-surface);
+    border: 1px solid var(--c-frame-lo);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color .15s, border-color .15s;
+}
+.casino-option span:hover { border-color: var(--c-frame); }
+.casino-option input:checked + span { color: #1a0f05; font-weight: 700; background: var(--c-frame-hi); border-color: var(--c-frame-hi); }
+.casino-number { display: flex; align-items: center; gap: 8px; color: var(--c-muted); font-size: 14px; }
+.casino-number[hidden] { display: none; }
+.casino-number input {
+    width: 100%;
+    min-height: 44px;
+    padding: 4px 10px;
+    color: var(--c-text);
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+    background: var(--c-surface);
+    border: 1px solid var(--c-frame);
+    border-radius: 8px;
+}
+.casino-option input:focus-visible + span,
+.casino-number input:focus-visible,
+.casino-play:focus-visible,
+.casino-auto:focus-visible,
+.casino-close:focus-visible { outline: 3px solid var(--c-win); outline-offset: 2px; }
+.casino-play {
+    min-height: 72px;
+    color: #fff8e6;
+    font-family: Cinzel, Georgia, "Noto Serif CJK TC", serif;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    background: linear-gradient(180deg, var(--c-play-a), var(--c-play-b));
+    border: 2px solid var(--c-frame-hi);
+    border-radius: 12px;
+    box-shadow: 0 4px 0 var(--c-play-shadow), 0 6px 12px #000a;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform .1s, box-shadow .1s, filter .15s;
+}
+.casino-play:hover:not(:disabled) { filter: brightness(1.1); }
+.casino-play:active:not(:disabled) { box-shadow: 0 1px 0 var(--c-play-shadow), 0 2px 6px #000a; transform: translateY(3px); }
+.casino-play:disabled { cursor: wait; filter: grayscale(.5) brightness(.7); }
+.casino-play small { display: block; font-family: Georgia, "Noto Serif CJK TC", serif; font-size: 13px; font-weight: 400; letter-spacing: 0; }
+.casino-auto {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    color: var(--c-text);
+    font-size: 15px;
+    background: var(--c-surface);
+    border: 1px solid var(--c-frame-lo);
+    border-radius: 8px;
+    cursor: pointer;
+}
+.casino-auto > span:first-child { white-space: nowrap; }
+.casino-auto-state { margin-left: auto; color: var(--c-muted); font-size: 13px; }
+.casino-switch {
+    position: relative;
+    flex: none;
+    width: 44px;
+    height: 24px;
+    background: #00000066;
+    border: 1px solid var(--c-frame-lo);
+    border-radius: 12px;
+    transition: background-color .2s;
+}
+.casino-switch::after {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    content: "";
+    background: var(--c-muted);
+    border-radius: 50%;
+    transition: transform .2s var(--c-ease-stop), background-color .2s;
+}
+.casino-auto[aria-checked="true"] .casino-switch { background: var(--c-play-b); border-color: var(--c-frame-hi); }
+.casino-auto[aria-checked="true"] .casino-switch::after { background: var(--c-frame-hi); transform: translateX(20px); }
+
+/* --- 巨龍輪盤:黑曜石、龍焰紅與熔金 --- */
+#casinoPanel[data-game="roulette"] {
+    --c-bg: #0e0909;
+    --c-backdrop: radial-gradient(ellipse at 50% -10%, #8a2a1355, transparent 60%);
+    --c-stage: radial-gradient(circle at 50% 45%, #3a140c 0%, #170b08 55%, #0b0605 100%);
+    --c-surface: #1e1311;
+    --c-frame: #b8461f;
+    --c-frame-hi: #ffb347;
+    --c-frame-lo: #4a160c;
+    --c-glow: #ff6a2b88;
+    --c-text: #f3e4cd;
+    --c-muted: #c9b196;
+    --c-play-a: #f0662a;
+    --c-play-b: #8f1c0d;
+    --c-play-shadow: #4a0d06;
+    --c-win: #ffd36b;
+    --c-danger: #ff9a86;
+}
+.rl-stage { display: grid; justify-items: center; gap: 8px; }
+.rl-wheel-box { position: relative; width: min(270px, 100%); aspect-ratio: 1; }
+.rl-wheel, .rl-ball-track { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rl-wheel { filter: drop-shadow(0 0 12px #ff5a1f55); will-change: transform; }
+.rl-wheel .rl-pocket { stroke: #e0a24a; stroke-width: .6; }
+.rl-wheel .rl-red { fill: #9c1f14; }
+.rl-wheel .rl-black { fill: #1a1312; }
+.rl-wheel .rl-green { fill: #1d6b47; }
+.rl-wheel .rl-pocket.is-hit { fill: var(--c-win); }
+.rl-wheel text { fill: #f6e7cf; font-family: Cinzel, Georgia, serif; font-size: 10.5px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.rl-wheel text.is-hit { fill: #2a0d05; }
+.rl-ball-track { pointer-events: none; will-change: transform; }
+.rl-ball {
+    position: absolute;
+    top: calc(50% - 37.7% - 6px);
+    left: calc(50% - 6px);
+    width: 12px;
+    height: 12px;
+    background: radial-gradient(circle at 35% 30%, #fff, #e6dccb 55%, #9c8f78);
+    border-radius: 50%;
+    box-shadow: 0 0 6px #fff8, 0 1px 2px #000;
+}
+.rl-pointer {
+    position: absolute;
+    top: -6px;
+    left: calc(50% - 12px);
+    width: 24px;
+    height: 30px;
+    filter: drop-shadow(0 2px 3px #000);
+}
+.rl-readout { display: flex; min-height: 36px; align-items: baseline; gap: 10px; }
+.rl-number { color: var(--c-frame-hi); font-family: Cinzel, Georgia, serif; font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rl-color { color: var(--c-muted); font-size: 15px; }
+
+/* --- 哥布林二十一點:沼澤綠、粗木板、生鏽鐵釘與骨骰 --- */
+#casinoPanel[data-game="goblin21"] {
+    --c-bg: #121709;
+    --c-backdrop:
+        radial-gradient(circle at 10px 10px, #8a6a3a 2px, transparent 3px),
+        radial-gradient(circle at calc(100% - 10px) 10px, #8a6a3a 2px, transparent 3px),
+        repeating-linear-gradient(90deg, #ffffff05 0 2px, transparent 2px 46px);
+    --c-stage: repeating-linear-gradient(180deg, #2b3a17 0 38px, #263414 38px 40px), #263414;
+    --c-surface: #1f2812;
+    --c-frame: #7a5427;
+    --c-frame-hi: #b5e04a;
+    --c-frame-lo: #33240f;
+    --c-glow: #a5d63a66;
+    --c-text: #ece7d2;
+    --c-muted: #bdb898;
+    --c-play-a: #86b52e;
+    --c-play-b: #3e5c12;
+    --c-play-shadow: #1e2c08;
+    --c-win: #d4f56a;
+    --c-danger: #ff9e7a;
+    border-style: dashed;
+    border-radius: 10px 16px 12px 18px;
+}
+#casinoPanel[data-game="goblin21"] .casino-header h2 { transform: rotate(-1.5deg); }
+.gb-stage { display: grid; gap: 10px; }
+.gb-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 92px 1fr 64px;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: #00000033;
+    border: 1px solid #00000066;
+    border-radius: 10px 6px 12px 8px;
+}
+.gb-row::after {
+    position: absolute;
+    right: 12px;
+    bottom: 4px;
+    left: 12px;
+    height: 4px;
+    content: "";
+    background: var(--c-win);
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--c-win);
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+}
+.gb-row.is-win { border-color: var(--c-win); box-shadow: 0 0 12px #d4f56a55; }
+.gb-row.is-win::after { opacity: 1; animation: casino-draw-line .45s ease-out forwards; }
+.gb-row.is-bust .gb-total { color: var(--c-danger); text-decoration: line-through; }
+.gb-who { color: var(--c-muted); font-size: 15px; }
+.gb-dice { display: flex; justify-content: center; gap: 10px; }
+.gb-die {
+    display: grid;
+    width: 54px;
+    height: 54px;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    padding: 7px;
+    background: radial-gradient(circle at 30% 25%, #fbf3dc, #e2d3aa 70%, #c8b483);
+    border-radius: 24% 18% 26% 20%;
+    box-shadow: inset -3px -4px 0 #00000026, 0 3px 4px #0008;
+}
+.gb-die i {
+    width: 9px;
+    height: 9px;
+    margin: auto;
+    visibility: hidden;
+    background: #3a1d10;
+    border-radius: 50%;
+}
+.gb-die[data-face="1"] i:nth-child(5),
+.gb-die[data-face="2"] i:is(:nth-child(1), :nth-child(9)),
+.gb-die[data-face="3"] i:is(:nth-child(1), :nth-child(5), :nth-child(9)),
+.gb-die[data-face="4"] i:is(:nth-child(1), :nth-child(3), :nth-child(7), :nth-child(9)),
+.gb-die[data-face="5"] i:is(:nth-child(1), :nth-child(3), :nth-child(5), :nth-child(7), :nth-child(9)),
+.gb-die[data-face="6"] i:is(:nth-child(1), :nth-child(3), :nth-child(4), :nth-child(6), :nth-child(7), :nth-child(9)) { visibility: visible; }
+.gb-die[data-face="6"].is-devil { background: radial-gradient(circle at 30% 25%, #ffb199, #d8432c 70%, #7a160c); }
+.gb-die[data-face="6"].is-devil i { background: #ffe9a8; }
+.gb-die.is-rolling { animation: gb-tumble .32s linear infinite; }
+@keyframes gb-tumble {
+    0% { transform: translate(0, 0) rotate(0); }
+    25% { transform: translate(2px, -5px) rotate(14deg); }
+    50% { transform: translate(-2px, 1px) rotate(-10deg); }
+    75% { transform: translate(1px, -3px) rotate(8deg); }
+    100% { transform: translate(0, 0) rotate(0); }
+}
+.gb-total { color: var(--c-text); font-family: Cinzel, Georgia, serif; font-size: 26px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.gb-vs { color: var(--c-frame-hi); font-family: Cinzel, Georgia, serif; font-size: 14px; letter-spacing: .3em; text-align: center; }
+
+/* --- 矮人地窖高低骰:花崗岩、鉚釘、熔爐餘燼與黃銅計數器 --- */
+#casinoPanel[data-game="dwarfMine"] {
+    --c-bg: #161514;
+    --c-backdrop:
+        radial-gradient(ellipse at 50% -15%, #ff8a2a33, transparent 55%),
+        repeating-linear-gradient(135deg, #ffffff04 0 3px, transparent 3px 9px);
+    --c-stage:
+        radial-gradient(circle at 12px 12px, #9b7a45 3px, transparent 4px),
+        radial-gradient(circle at calc(100% - 12px) 12px, #9b7a45 3px, transparent 4px),
+        radial-gradient(circle at 12px calc(100% - 12px), #9b7a45 3px, transparent 4px),
+        radial-gradient(circle at calc(100% - 12px) calc(100% - 12px), #9b7a45 3px, transparent 4px),
+        linear-gradient(180deg, #34312d, #24221f);
+    --c-surface: #23211e;
+    --c-frame: #8f6c38;
+    --c-frame-hi: #f2b84b;
+    --c-frame-lo: #3b2f1f;
+    --c-glow: #ff8a2a66;
+    --c-text: #efe6d5;
+    --c-muted: #bfb39c;
+    --c-play-a: #e47a2c;
+    --c-play-b: #8a3512;
+    --c-play-shadow: #461a08;
+    --c-win: #ffd166;
+    --c-danger: #ff9d84;
+}
+.dw-stage { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 16px 6px; }
+.dw-tablet {
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    padding: 12px 8px;
+    background: linear-gradient(180deg, #4a4742, #36332f);
+    border: 2px solid #1e1c19;
+    border-radius: 8px 8px 14px 14px;
+    box-shadow: inset 0 2px 0 #ffffff1a, inset 0 -3px 6px #0008, 0 4px 8px #0009;
+}
+.dw-tablet.is-win { border-color: var(--c-win); box-shadow: inset 0 2px 0 #ffffff1a, 0 0 14px #ffd16688; }
+.dw-cap { color: var(--c-frame-hi); font-size: 15px; letter-spacing: .3em; }
+.dw-counter { display: flex; gap: 4px; padding: 5px; background: #1b1916; border-radius: 6px; box-shadow: inset 0 2px 6px #000; }
+.dw-reel { width: 36px; height: 52px; overflow: hidden; background: linear-gradient(180deg, #a98545, #e3c27a 50%, #a98545); border-radius: 4px; }
+.dw-strip { will-change: transform; }
+.dw-cell { display: grid; height: 52px; place-items: center; color: #2b1d0e; font-family: Cinzel, Georgia, serif; font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dw-relation { position: relative; display: grid; min-width: 76px; justify-items: center; gap: 4px; }
+.dw-rel-symbol { color: var(--c-muted); font-family: Cinzel, Georgia, serif; font-size: 34px; font-weight: 700; line-height: 1; }
+.dw-rel-text { min-height: 20px; color: var(--c-muted); font-size: 14px; }
+.dw-relation.is-win .dw-rel-symbol, .dw-relation.is-win .dw-rel-text { color: var(--c-win); }
+.dw-relation::after {
+    position: absolute;
+    bottom: -10px;
+    right: -14px;
+    left: -14px;
+    height: 4px;
+    content: "";
+    background: var(--c-win);
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--c-win);
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+}
+.dw-relation.is-win::after { opacity: 1; animation: casino-draw-line .45s ease-out forwards; }
+
+@keyframes casino-draw-line { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+@media (max-width: 600px) {
+    #casinoPanel { padding: 10px 12px 12px; }
+    .casino-body { grid-template-columns: 1fr; }
+    .casino-controls { display: grid; grid-template-columns: 1fr 1fr; }
+    .casino-label, .casino-options, .casino-number { grid-column: 1 / -1; }
+    .casino-options { grid-template-columns: repeat(4, 1fr); }
+    .casino-options[data-count="3"] { grid-template-columns: repeat(3, 1fr); }
+    .casino-play { min-height: 56px; font-size: 20px; }
+    .rl-wheel-box { width: min(230px, 100%); }
+    .gb-row { grid-template-columns: 1fr 52px; }
+    .gb-who { grid-column: 1 / -1; }
+    .gb-die { width: 46px; height: 46px; padding: 6px; }
+    .gb-die i { width: 8px; height: 8px; }
+    .dw-stage { grid-template-columns: 1fr; }
+    .dw-relation::after { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #casinoPanel.is-jackpot, .gb-die.is-rolling { animation: none; }
+    .gb-row.is-win::after, .dw-relation.is-win::after { animation: none; transform: none; }
+    .casino-switch, .casino-switch::after, .casino-play { transition: none; }
+}

@@ -1,0 +1,780 @@
+/* 基本版面與元件 (預設主題)。由 index.html 載入 */
+/* 註:Bootstrap 已提供 [hidden]{display:none!important},以下只處理會被 d-flex 等 !important 蓋掉的情況 */
+:root { --right-panel-width: 400px; }
+body {
+    background-color: black;
+    color: white;
+    height: 100vh;
+    /* iOS Safari/Chrome: 100vh 含瀏覽器工具列後方區域,改用動態視窗高度 */
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+.formatted-text { tab-size: 4; }
+/* 連線時輸出區頂端的橫幅 (og-image.jpg 1200×630):寬度隨輸出區縮放,最大 600px */
+.welcome-banner {
+    display: block;
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    aspect-ratio: 1200 / 630;
+    border-radius: 8px;
+}
+#output-container, #output-top, #output { background-color: black; }
+#output-container {
+    flex: 1;
+    position: relative;
+    margin-right: var(--right-panel-width);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+#output-top, #output {
+    padding: 12px;
+    line-height: 18px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    white-space: pre;
+    overflow-y: auto;
+}
+#output-top {
+    flex: 0 0 auto;
+    max-height: 0;
+    opacity: 0;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid transparent;
+}
+#output { flex: 1; }
+.split-view #output-top {
+    max-height: 50%;
+    opacity: 1;
+    border-bottom: 1px solid #333;
+}
+/* output-top 未使用時完全收合 (覆蓋各主題的 padding / border) */
+body #output-container:not(.split-view) #output-top {
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+}
+#statusBar {
+    background-color: #1a1a1a;
+    padding: 1px 10px;
+    border-bottom: 1px solid #333;
+}
+.status-icon { margin-right: 5px; }
+.status-effect { color: #666; transition: color 0.3s ease; }
+.status-effect.poison.active { color: #00ff00; }
+.status-effect.burn.active { color: #ff4500; }
+.status-effect.bleed.active { color: #ff0000; }
+.status-hp { color: #ff0000; }
+.status-mana { color: #4169e1; }
+.status-move, .status-gold { color: #ffd700; }
+.status-level { color: #9370db; }
+.status-combat-stat { color: #ff6347; }
+.status-effects[hidden], .status-combat[hidden],
+body.theme-dark-fantasy .status-effects[hidden],
+body.theme-dark-fantasy .status-combat[hidden] {
+    display: none !important;
+}
+.fixed-width { font-family: monospace; display: inline-block; }
+.bar-width { width: 5ch; }
+.progress { height: 8px; margin: 1px 0; }
+#targetInfoBar { font-size: 1.1em; background-color: #1a1a1a; }
+#targetName, #targetHp, #targetTargetName, #targetTargetHp { font-size: calc(1em + 2px); }
+#targetName, #targetHp { color: #ff4444; min-width: 90px; }
+#targetTargetName, #targetTargetHp, .target-arrow-icon { color: #ffe066; }
+.target-arrow-icon { font-size: 1.1em; }
+#inputArea { position: relative; padding: 5px; background-color: black; }
+#inputBox { background-color: white; color: black; }
+#sendButton { min-width: 60px; }
+#themeSelector { width: 42px; height: 38px; flex: 0 0 auto; }
+.bottom-container {
+    /* left / width 由 JS 依 #output 位置同步 */
+    display: flex;
+    box-sizing: border-box;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+}
+.left-panel {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+#chatArea {
+    width: 50%;
+    background-color: #1a1a1a;
+    border-left: 1px solid #333;
+    overflow-y: auto;
+    padding: 10px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    line-height: 0.4;
+}
+/* 懸浮按鈕 (活動傳送、互動):懸浮在 chatArea 正上方;位置由 JS 依 chatArea 實際位置計算 (makeFloatingButton) */
+.float-button {
+    position: fixed;
+    width: 44px;
+    height: 44px;
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    z-index: 1001;
+}
+.float-button[hidden] { display: none; }
+.float-button:hover { filter: brightness(1.2); }
+.interact-button {
+    border: 2px solid #ffffff;
+    background: #1a1a1acc;
+    color: #ffffff;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+    box-shadow: 0 0 8px #ffffff66;
+}
+/* 羊皮卷軸選單:房間 NPC / 玩家的點擊選單、多個可互動物件時 [互動] 按鈕的選單共用 (openActionMenu)
+   紙面 = 羊皮紙漸層 + 汙漬 + SVG 雜訊紋理,邊緣以內陰影燒焦;上下 ::before/::after 為捲軸木軸 */
+.scroll-menu {
+    --parchment-ink: #3b2410;
+    --parchment-title: #4a1f0a;
+    --parchment-edge: #8a5a2b;
+    --parchment-danger: #8a1c12;
+    --parchment-hover: rgba(122, 74, 30, 0.16);
+    --parchment-press: rgba(122, 74, 30, 0.28);
+    position: fixed;
+    min-width: 168px;
+    max-width: min(300px, calc(100vw - 24px));
+    padding: 18px 12px;
+    color: var(--parchment-ink);
+    font-family: Georgia, 'Times New Roman', 'Noto Serif TC', 'PMingLiU', 'MingLiU', serif;
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .22 0 0 0 0 .08 0 0 0 .28 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+        radial-gradient(circle at 18% 82%, rgba(150, 95, 40, 0.20), transparent 38%),
+        radial-gradient(circle at 86% 18%, rgba(150, 95, 40, 0.16), transparent 32%),
+        radial-gradient(ellipse at 50% 45%, #f6e7bf 0%, #ecd49c 55%, #d6ad66 100%);
+    border-left: 1px solid #b98a4a;
+    border-right: 1px solid #b98a4a;
+    box-shadow:
+        inset 0 0 18px rgba(110, 62, 18, 0.55),
+        inset 0 0 3px rgba(80, 40, 10, 0.6),
+        0 10px 24px rgba(0, 0, 0, 0.7);
+    line-height: 1.4;
+    z-index: 1002;
+    transform-origin: 50% 0;
+    animation: scroll-unfurl 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.scroll-menu[hidden] { display: none; }
+.scroll-menu::before,
+.scroll-menu::after {
+    content: '';
+    position: absolute;
+    left: -9px;
+    right: -9px;
+    height: 14px;
+    border-radius: 7px;
+    background:
+        radial-gradient(circle at 5px 50%, #2e1a08 3px, transparent 4px),
+        radial-gradient(circle at calc(100% - 5px) 50%, #2e1a08 3px, transparent 4px),
+        linear-gradient(to bottom, #e3b97f 0%, #a86f38 40%, #6e4119 75%, #4a2a10 100%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.55);
+}
+.scroll-menu::before { top: -7px; }
+.scroll-menu::after { bottom: -7px; }
+.scroll-menu-title {
+    padding: 0 6px;
+    color: var(--parchment-title);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.scroll-menu-title[hidden] { display: none; }
+/* 標題下的分隔線:兩端淡出的墨線 + 中央菱形 */
+.scroll-menu-divider {
+    position: relative;
+    height: 1px;
+    margin: 8px 10px 6px;
+    background: linear-gradient(90deg, transparent, var(--parchment-edge) 20%, var(--parchment-edge) 80%, transparent);
+}
+.scroll-menu-divider::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    background: #f1ddaa;
+    border: 1px solid var(--parchment-edge);
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+.scroll-menu-title[hidden] + .scroll-menu-divider { display: none; }
+.scroll-menu-body {
+    max-height: 50vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+.scroll-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    white-space: nowrap;
+    touch-action: manipulation;
+    transition: background-color 120ms ease-out;
+}
+.scroll-menu-item + .scroll-menu-item { margin-top: 2px; }
+.scroll-menu-item > span { overflow: hidden; text-overflow: ellipsis; }
+.scroll-menu-item svg { flex: 0 0 18px; width: 18px; height: 18px; }
+.scroll-menu-item .scroll-menu-chevron { flex-basis: 14px; width: 14px; height: 14px; margin-left: auto; opacity: 0.7; }
+.scroll-menu-item.is-back { color: #6b4420; font-size: 14px; }
+.scroll-menu-note { padding: 10px 12px; color: #6b4420; font-size: 14px; font-style: italic; text-align: center; }
+.scroll-menu .scroll-menu-item:hover { background: var(--parchment-hover); text-decoration: none; }
+.scroll-menu-item:active { background: var(--parchment-press); }
+.scroll-menu-item:focus-visible { outline: 2px solid var(--parchment-edge); outline-offset: -2px; }
+.scroll-menu-item.is-danger { color: var(--parchment-danger); font-weight: 700; }
+@keyframes scroll-unfurl {
+    from { opacity: 0; transform: scaleY(0.55); }
+    to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .scroll-menu { animation: none; }
+}
+/* look 房間時 NPC / 其他玩家行尾的白色 [互動]:點擊跳出羊皮卷軸選單 */
+.entity-link { cursor: pointer; }
+.entity-link:hover { text-decoration: underline; }
+.boss-event-button {
+    border: 2px solid #ffd54a;
+    background: #1a1a1acc;
+    box-shadow: 0 0 10px #ffd54a99;
+    animation: boss-event-pulse 1.6s ease-in-out infinite;
+}
+.boss-event-button img { width: 100%; height: 100%; object-fit: contain; }
+@keyframes boss-event-pulse {
+    0%, 100% { box-shadow: 0 0 6px #ffd54a99; }
+    50% { box-shadow: 0 0 16px #ffd54a; }
+}
+
+/* ===== 設定面板 (羊皮紙卷軸,置中顯示、可由標題列拖移) ===== */
+#settingsPanel {
+    position: fixed;
+    z-index: 1100;
+    width: min(460px, calc(100vw - 24px));
+    min-height: 540px;
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+    padding: 28px 24px 24px;
+    color: #382719;
+    background:
+        radial-gradient(ellipse at 50% 0, #fff4ce99, transparent 70%),
+        repeating-linear-gradient(3deg, #ddc28c 0, #e8d5a9 2px, #dfc995 4px, #e8d5a9 7px);
+    box-shadow: 0 12px 32px #000b, inset 0 0 24px #90652c55;
+    font-family: Georgia, "Noto Serif CJK TC", serif;
+}
+#settingsPanel::before, #settingsPanel::after {
+    position: absolute;
+    right: 0;
+    left: 0;
+    height: 12px;
+    content: "";
+    background: linear-gradient(180deg, #8c6237, #d2b477 40%, #9a7045);
+    box-shadow: 0 2px 4px #432b1770;
+}
+#settingsPanel::before { top: 0; }
+#settingsPanel::after { bottom: 0; }
+.settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 48px;
+    margin: 0 0 14px;
+    padding-right: 42px;
+    cursor: move;
+    user-select: none;
+    touch-action: none;
+}
+#settingsPanel.is-macos .settings-header { padding: 0 0 0 56px; }
+#settingsPanel h2 { margin: 0; color: #4a2d17; font-family: inherit; font-size: 22px; }
+.settings-window-control {
+    position: absolute;
+    top: 17px;
+    right: 17px;
+    display: grid;
+    width: 25px;
+    height: 25px;
+    place-items: center;
+    padding: 0;
+    color: #382719;
+    border: 1px solid #8e6335;
+    border-radius: 50%;
+    background: linear-gradient(#f3dfb2, #c8a36a);
+    box-shadow: 0 1px 3px #442a1470;
+    line-height: 1;
+}
+#settingsPanel.is-macos .settings-window-control { right: auto; left: 17px; }
+.settings-reset-button {
+    flex: 0 0 auto;
+    padding: 3px 10px;
+    color: #382719;
+    border: 1px solid #8e6335;
+    background: #e7d09e;
+    font-family: inherit;
+}
+#settingsPanel label, #settingsPanel legend { color: #382719; font-weight: 600; }
+#settingsPanel .settings-option-row { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; }
+#settingsPanel .settings-notification-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+#settingsPanel .form-check-input { border-color: #8e6335; border-radius: 4px; }
+#settingsPanel .form-control, #settingsPanel .form-select {
+    color: #2f2117;
+    border-color: #9c784a;
+    background-color: #f5e8c9dd;
+}
+#settingsPanel .form-control, #settingsPanel .form-select,
+#settingsPanel .settings-reset-button, #settingsPanel fieldset {
+    border-radius: 6px;
+}
+#settingsPanel fieldset {
+    margin: 16px 0;
+    padding: 10px 12px 12px;
+    border: 1px solid #9c784a;
+    background: #f5e8c955;
+}
+#settingsPanel legend { float: none; width: auto; margin: 0; padding: 0 6px; font-size: 15px; }
+#settingsPanel button:disabled { opacity: 0.5; cursor: not-allowed; }
+.status-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px 12px;
+}
+.status-options label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 400 !important;
+}
+.settings-credential-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 14px;
+}
+.settings-credential-row button { flex: none; }
+#settingsPanel .settings-theme-row { margin-top: 12px; }
+.redeem-code-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.redeem-code-row label, .redeem-code-row button { flex: 0 0 auto; margin: 0; }
+.redeem-code-row input { min-width: 0; }
+/* 設定面板欄位高度縮小 (38px -> 30px),覆蓋主題樣式 */
+#settingsPanel #themeColor,
+#settingsPanel #redeemCodeInput,
+#settingsPanel #redeemCodeButton {
+    height: 30px;
+    min-height: 30px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    line-height: 1.2;
+}
+#settingsPanel .account-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+#settingsPanel .account-row label { flex: 0 0 auto; margin: 0; }
+#settingsPanel .account-row .form-control { flex: 1 1 auto; min-width: 0; height: 30px; }
+#settingsPanel .account-mail { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#settingsPanel .account-mail-status { flex: 0 0 auto; font-size: 12px; }
+#settingsPanel .account-danger { margin-top: 8px; color: #ff6b6b; border-color: #ff6b6b; }
+/* 修改密碼 (信箱驗證後顯示) */
+#settingsPanel .password-change { margin-top: 8px; padding-top: 8px; border-top: 1px solid #ffffff22; }
+#settingsPanel .password-change[hidden] { display: none; }
+#settingsPanel .password-change-status { margin: 0 0 6px; min-height: 1.2em; font-size: 13px; line-height: 1.5; }
+/* 預設羊皮紙底用深色字;D2 主題的黑皮革底改用亮色 */
+#settingsPanel .password-change-status.is-error { color: #a1261b; font-weight: 600; }
+#settingsPanel .password-change-status.is-ok { color: #1f6b33; font-weight: 600; }
+body.theme-diablo #settingsPanel .password-change-status.is-error { color: #ff8a80; }
+body.theme-diablo #settingsPanel .password-change-status.is-ok { color: #8fe3a0; }
+#settingsError { margin-top: 8px; color: #8b1d1d; font-size: 13px; }
+/* web view:角色資料放在設定面板右側 */
+@media (min-width: 769px) {
+    #settingsPanel:has(#accountSection:not([hidden])) {
+        width: min(920px, calc(100vw - 24px));
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 20px;
+        align-content: start;
+    }
+    #settingsPanel:has(#accountSection:not([hidden])) > * { grid-column: 1; }
+    #settingsPanel:has(#accountSection:not([hidden])) > .settings-header { grid-column: 1 / -1; }
+    #settingsPanel:has(#accountSection:not([hidden])) > #accountSection {
+        grid-column: 2;
+        grid-row: 2 / span 8;
+        margin-top: 0;
+    }
+}
+@media (max-width: 480px) {
+    #settingsPanel { width: calc(100vw - 16px); padding-right: 14px; padding-left: 14px; }
+    .status-options { gap: 8px 6px; }
+    .status-options label { gap: 4px; font-size: 12px; }
+}
+
+/* ===== 右側面板 (地圖 / 物品 / 裝備) ===== */
+.right-panel {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: var(--right-panel-width);
+    box-sizing: border-box;
+    height: 100vh;
+    background-color: #1a1a1a;
+    padding: 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.equipment-panel, .inventory-panel {
+    background-color: #2a2a2a;
+    padding: 3px;
+    border-radius: 5px;
+    display: none;
+}
+.equipment-panel.active, .inventory-panel.active { display: block; }
+.equipment-list, .inventory-list {
+    font-family: monospace;
+    white-space: pre-wrap;
+    line-height: 1.2;
+    height: calc(100vh - 520px);
+    min-height: 120px;
+    overflow-y: auto;
+}
+.tab-buttons { display: flex; gap: 10px; margin-bottom: 10px; }
+.tab-btn {
+    flex: 1;
+    padding: 1px;
+    background-color: #3a3a3a;
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.8s;
+}
+.tab-btn:hover { background-color: #4a4a4a; }
+.tab-btn.active { background-color: #5a5a5a; border-bottom: 4px solid #87ceeb; }
+.item-link { cursor: pointer; }
+.item-link:hover { text-decoration: underline; }
+
+/* right-panel 左側寬度拖移控制 */
+.right-panel-resizer {
+    position: fixed;
+    top: 0;
+    right: var(--right-panel-width);
+    width: 10px;
+    height: 100vh;
+    transform: translateX(50%);
+    cursor: col-resize;
+    z-index: 1002;
+    touch-action: none;
+}
+.right-panel-resizer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: transparent;
+    transition: background-color 0.15s;
+}
+.right-panel-resizer:hover::before,
+body.is-resizing-right-panel .right-panel-resizer::before { background: #87ceeb; }
+.right-panel-resizer::after {
+    content: "⇔ 按住左鍵拖移調整寬度";
+    position: absolute;
+    top: 50%;
+    right: calc(100% + 6px);
+    transform: translateY(-50%);
+    padding: 4px 8px;
+    white-space: nowrap;
+    font-size: 12px;
+    color: #fff;
+    background: #000c;
+    border: 1px solid #87ceeb;
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.right-panel-resizer:hover::after { opacity: 1; }
+body.is-resizing-right-panel .right-panel-resizer::after { opacity: 0; }
+body.is-resizing-right-panel { cursor: col-resize; user-select: none; }
+
+/* ===== 地圖 ===== */
+.map-window {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    width: 100%;
+    max-height: 420px;
+    overflow: hidden;
+    color: #eadbb8;
+    border: 1px solid #806b43;
+    border-radius: 12px;
+    background: #17191e;
+    box-shadow: 0 16px 60px #000;
+}
+.map-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-bottom: 1px solid #443a29;
+    font-size: 1rem;
+}
+.map-toolbar { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+#mapTitle {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.map-toolbar button, #mapCollapse {
+    color: #eadbb8;
+    border: 1px solid #645438;
+    border-radius: 6px;
+    background: #24262b;
+    padding: 5px 8px;
+    white-space: nowrap;
+}
+.map-toolbar button.active { color: #17191e; background: #d3b36a; }
+#mapCollapse { flex: 0 0 auto; }
+.map-content { min-height: 0; padding: 8px; overflow: auto; }
+.map-window.collapsed .map-content { display: none; }
+#mapSvg {
+    display: block;
+    width: 100%;
+    height: 320px;
+    min-width: 0;
+    flex: 0 0 320px;
+    border: 1px solid #39352c;
+    border-radius: 8px;
+    background-color: #111318;
+    background-image: radial-gradient(#4b4230 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+.map-link { stroke: #8d7951; stroke-width: 3; }
+.map-link.vertical { stroke: #7196aa; stroke-dasharray: 8 6; }
+.map-direction-label {
+    fill: #d7c18d;
+    font: 14px sans-serif;
+    paint-order: stroke;
+    stroke: #111318;
+    stroke-width: 4px;
+}
+.map-room-node { cursor: pointer; }
+.map-room-node rect { fill: #292b30; stroke: #766442; stroke-width: 2; }
+.map-room-node.current rect { fill: #514326; stroke: #e4c36e; stroke-width: 3; }
+.map-room-node.neighbor:hover rect { fill: #3e4a4b; stroke: #a7d1d6; }
+.map-room-node text { fill: #f0e6cf; font: 28px sans-serif; pointer-events: none; }
+.map-room-node .map-vertical-indicators { fill: #8db9c9; font-size: 16px; }
+
+/* ===== DOT 浮動傷害 ===== */
+#dotFloatLayer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 20;
+}
+.dot-float {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: bold;
+    font-size: 1.1em;
+    text-shadow: 0 0 3px #000, 0 0 3px #000;
+    animation: dotFloatUp 1s ease-out forwards;
+    white-space: nowrap;
+}
+.dot-float img { width: 20px; height: 20px; border-radius: 3px; }
+/* 浮動數值分三欄:玩家 DOT (左) / 玩家 HOT (右) / 目標 DOT。欄位在版面流中,彼此不會重疊 */
+.float-row { position: absolute; display: flex; align-items: flex-end; gap: 8px; }
+/* 玩家區:DOT 靠左、HOT 靠右,寬度至少等於玩家「名稱 (血量%)」的保留寬度 */
+.float-self { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
+.float-lane { display: flex; flex-direction: column; align-items: flex-start; }
+.float-lane.hot { align-items: flex-end; }
+.float-lane .dot-float { position: relative; }
+.dot-float.heal { color: #66ff99; }
+/* DOT 傷害數字一律紅色 (種類由圖示區分) */
+.dot-float.bleed, .dot-float.burn, .dot-float.poison { color: #ff5555; }
+@keyframes dotFloatUp {
+    0% { opacity: 0; transform: translateY(0); }
+    15%, 70% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-45px); }
+}
+
+/* ===== 九宮格方向按鈕 (只在 mobile 顯示) ===== */
+.mobile-numpad {
+    display: none;
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    opacity: 0.7;
+    z-index: 1001;
+}
+.numpad-row { display: flex; justify-content: flex-end; }
+.numpad-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #ffffff3f;
+    background: #7660f51f;
+    border: none;
+    border-radius: 12px;
+    outline: none;
+    transition: background 0.2s;
+}
+.numpad-btn:active { background: rgba(0,0,0,0.2); }
+/* 方向鍵整組可拖曳 (game.js makeDraggable):禁止瀏覽器把拖曳當成捲動頁面 */
+.mobile-numpad {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.mobile-numpad .numpad-btn { touch-action: none; }
+.mobile-numpad.is-dragging { opacity: 1; cursor: grabbing; filter: drop-shadow(0 6px 12px #000c); }
+
+/* ===== 快捷指令列 (只在 mobile 顯示) =====
+   直向排列,由下往上:[互動]、攻擊、開關,展開的指令 (狀態 / 物品 / 裝備 / 任務) 從開關上方往上長出來。
+   column-reverse:DOM 順序就是由下往上。位置由 JS 計算 (預設在輸出區右下角,以下緣定位),整組可拖曳。
+   每顆按鈕都是 44px 圓形、間距 8px (觸控尺寸);外層透明,只有按鈕本身有底色 */
+.quick-bar {
+    --quick-btn-bg: #1d1712f2;
+    --quick-btn-border: #c8a96ab3;
+    --quick-btn-press: #3a2d20;
+    --quick-text: #f3e6c8;
+    --quick-danger: #e0614f;
+    --quick-danger-text: #ffd2c9;
+    --quick-focus: #ffd27a;
+    --quick-shadow: 0 2px 8px #000c;
+    position: fixed;
+    display: none;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 8px;
+    z-index: 1001;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    cursor: grab;
+}
+.quick-bar[hidden] { display: none !important; }
+/* 設定面板開著時不顯示快捷列與方向鍵:兩者圖層較高,會壓在面板上 (手機版面板幾乎佔滿畫面) */
+body:has(#settingsPanel:not([hidden])) .quick-bar,
+body:has(#settingsPanel:not([hidden])) .mobile-numpad { visibility: hidden; }
+.quick-bar.is-dragging { cursor: grabbing; }
+.quick-bar.is-dragging .quick-btn { box-shadow: 0 8px 18px #000d; }
+.quick-items { display: flex; flex-direction: column-reverse; align-items: center; gap: 8px; }
+.quick-items[hidden] { display: none; }
+.quick-btn,
+.quick-bar > .interact-button {
+    position: static;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--quick-btn-border);
+    border-radius: 50%;
+    background: var(--quick-btn-bg);
+    color: var(--quick-text);
+    box-shadow: var(--quick-shadow);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0;
+    touch-action: none;
+    cursor: inherit;
+    transition: transform 120ms ease-out, background-color 120ms ease-out;
+}
+/* [互動] 沒有對象時保留空位:攻擊與開關的位置不會隨著換房間跳動 (visibility:hidden 也不會接到點擊) */
+.quick-bar > .interact-button[hidden] { display: flex !important; visibility: hidden; }
+.quick-btn:active,
+.quick-bar > .interact-button:active { transform: scale(0.94); background: var(--quick-btn-press); }
+.quick-btn:focus-visible,
+.quick-bar > .interact-button:focus-visible { outline: 2px solid var(--quick-focus); outline-offset: 2px; }
+.quick-bar > .interact-button:hover { filter: none; }
+.quick-btn.is-danger { border-color: var(--quick-danger); color: var(--quick-danger-text); }
+.quick-toggle svg { width: 20px; height: 20px; }
+.quick-toggle .quick-icon-expand { color: var(--quick-focus); }
+.quick-bar:not(.is-collapsed) .quick-icon-expand,
+.quick-bar.is-collapsed .quick-icon-collapse { display: none; }
+/* 展開中:開關呈按下狀態,指令由下往上依序淡入 */
+.quick-bar:not(.is-collapsed) .quick-toggle { background: var(--quick-btn-press); border-color: var(--quick-focus); }
+.quick-items:not([hidden]) .quick-btn { animation: quick-grow 160ms ease-out both; animation-delay: calc(var(--i, 0) * 30ms); }
+@keyframes quick-grow {
+    from { opacity: 0; transform: translateY(10px) scale(0.9); }
+    to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .quick-btn, .quick-bar > .interact-button { transition: none; }
+    .quick-btn:active, .quick-bar > .interact-button:active { transform: none; }
+    .quick-items:not([hidden]) .quick-btn { animation: none; }
+}
+
+/* ===== 響應式 ===== */
+@media (max-width: 1400px) {
+    #output-container { margin-right: 0; }
+    .right-panel { display: none; }
+    .left-panel, #chatArea { flex: 1 1 50%; width: 50%; }
+}
+@media (max-width: 768px) {
+    .split-view #output-top { max-height: 0; opacity: 0; border-bottom: 1px solid transparent; }
+    body #output-container #output-top { padding-top: 0; padding-bottom: 0; border-width: 0; }
+    .mobile-numpad { display: block; }
+    .quick-bar { display: flex; }
+    .bottom-container { flex-direction: column; }
+    .left-panel { order: 1; flex: 0 0 auto; width: 100%; }
+    #chatArea {
+        order: 2;
+        flex: 0 0 auto;
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid #333;
+    }
+    #targetInfoBar { display: none !important; }
+}
+@media (max-width: 576px) {
+    #statusBar { flex-wrap: nowrap !important; overflow-x: auto; }
+    .status-hp, .status-mana, .status-move { min-width: 0; flex: 1 1 0; }
+    .status-label { display: none !important; }
+    .map-header { gap: 5px; padding: 6px; font-size: .9rem; }
+    .map-toolbar { gap: 4px; }
+    .map-toolbar button, #mapCollapse { padding: 4px 5px; font-size: .8rem; }
+}

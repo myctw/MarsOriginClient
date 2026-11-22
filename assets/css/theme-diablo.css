@@ -1,0 +1,206 @@
+/* 暗黑破壞神主題:body.theme-diablo,疊加在奇幻主題之上。由 index.html 載入,需在 theme-dark-fantasy.css 之後 */
+/* ===== 暗黑破壞神主題 (theme-diablo) =====
+   疊加在 theme-dark-fantasy 之上: 版面沿用 dark-fantasy,
+   這裡只覆寫 --df-* 色票/字型,並加上鐵框、金邊、血紅等裝飾。 */
+body.theme-diablo {
+    --df-bg: #0b0807;
+    --df-surface: #130e0c;
+    --df-panel: #1b1411;
+    --df-elevated: #2a1d17;
+    --df-border: #5a4426;
+    --df-border-soft: #2e2218;
+    --df-text: #d6c9ae;
+    --df-secondary: #a39880;
+    --df-muted: #8d826c;
+    --df-gold: #c9a85c;
+    --df-gold-highlight: #e6c987;
+    --df-hp: #e2574f;
+    --df-mana: #5b86e0;
+    --df-move: #c28a3a;
+    --df-success: #6fae52;
+    --df-danger: #a3231b;
+    --d2-blood: #7a1712;
+    --d2-blood-hot: #a31d15;
+    --d2-iron: #3a3027;
+    --d2-gold-dim: #8a6d3b;
+    --df-font-ui: "Cinzel", "Palatino Linotype", "Book Antiqua", "Noto Serif CJK TC", "PMingLiU", serif;
+    --df-font-title: "Cinzel", "Palatino Linotype", "Book Antiqua", "Noto Serif CJK TC", serif;
+    background:
+        radial-gradient(ellipse at 50% -10%, #3a120c55 0, transparent 55%),
+        radial-gradient(ellipse at 50% 120%, #00000099 0, transparent 60%),
+        var(--df-bg);
+}
+body.theme-diablo .left-panel,
+body.theme-diablo #chatArea,
+body.theme-diablo #statusBar,
+body.theme-diablo #targetInfoBar,
+body.theme-diablo #inputArea,
+body.theme-diablo .equipment-panel,
+body.theme-diablo .inventory-panel {
+    border-color: var(--d2-iron);
+    background-image: linear-gradient(180deg, #ffffff06, transparent 30%, #00000040);
+    box-shadow:
+        inset 0 0 0 1px #00000099,
+        inset 0 0 0 2px #8a6d3b33,
+        inset 0 8px 18px #00000066,
+        0 4px 14px #000a;
+}
+body.theme-diablo #output,
+body.theme-diablo #output-top {
+    background:
+        radial-gradient(ellipse at 50% 0, #2a110b33, transparent 70%),
+        var(--df-surface);
+    border-color: var(--d2-iron);
+    box-shadow: inset 0 0 0 1px #000, inset 0 0 22px #000b;
+}
+body.theme-diablo .right-panel {
+    border-left: 2px solid var(--d2-iron);
+    box-shadow: -1px 0 0 #000, -9px 0 24px #000a, inset 1px 0 0 #8a6d3b44;
+}
+body.theme-diablo #inputBox,
+body.theme-diablo #themeColor {
+    border: 1px solid var(--d2-gold-dim);
+    background-color: #070504;
+    box-shadow: inset 0 2px 7px #000;
+}
+body.theme-diablo #inputBox:focus,
+body.theme-diablo #themeColor:focus {
+    border-color: var(--df-gold-highlight);
+    box-shadow: 0 0 0 2px #c9a85c40, 0 0 12px #c9a85c33, inset 0 2px 7px #000;
+}
+body.theme-diablo .btn,
+body.theme-diablo .tab-btn,
+body.theme-diablo .numpad-btn,
+body.theme-diablo #themeSelector,
+body.theme-diablo .map-toolbar button,
+body.theme-diablo #mapCollapse,
+body.theme-diablo .settings-window-control,
+body.theme-diablo .settings-reset-button {
+    color: var(--df-gold);
+    background: linear-gradient(180deg, #33261e, #1a120e);
+    border-color: var(--d2-gold-dim);
+}
+body.theme-diablo .btn,
+body.theme-diablo .tab-btn,
+body.theme-diablo .numpad-btn,
+body.theme-diablo #themeSelector {
+    border: 1px solid var(--d2-gold-dim);
+    box-shadow: inset 0 1px 0 #ffffff10, inset 0 -2px 4px #0008;
+    text-shadow: 0 1px 2px #000;
+}
+body.theme-diablo .settings-window-control,
+body.theme-diablo .settings-reset-button { box-shadow: inset 0 1px 0 #ffffff10; }
+body.theme-diablo .btn:hover,
+body.theme-diablo .tab-btn:hover,
+body.theme-diablo .numpad-btn:hover,
+body.theme-diablo #themeSelector:hover,
+body.theme-diablo .settings-window-control:hover,
+body.theme-diablo .settings-reset-button:hover,
+body.theme-diablo .map-toolbar button.active {
+    color: #fff1d0;
+    background: linear-gradient(180deg, var(--d2-blood-hot), var(--d2-blood));
+}
+body.theme-diablo .btn:hover,
+body.theme-diablo .tab-btn:hover,
+body.theme-diablo .numpad-btn:hover,
+body.theme-diablo #themeSelector:hover { border-color: var(--df-gold-highlight); }
+body.theme-diablo .map-toolbar button.active { border-color: var(--df-gold); }
+body.theme-diablo .btn:active,
+body.theme-diablo .tab-btn:active,
+body.theme-diablo .numpad-btn:active {
+    background: linear-gradient(180deg, #4a0d09, #240504);
+    box-shadow: inset 0 3px 8px #000;
+}
+body.theme-diablo #sendButton {
+    color: #f3e3c3;
+    background: linear-gradient(180deg, var(--d2-blood-hot), #5c0f0b);
+    border: 1px solid var(--df-gold);
+    text-shadow: 0 1px 2px #000;
+    letter-spacing: 0.08em;
+}
+body.theme-diablo #sendButton:hover,
+body.theme-diablo #sendButton:focus-visible {
+    color: #fff1d0;
+    background: linear-gradient(180deg, #c42319, #7a1712);
+    box-shadow: 0 0 12px #a31d1566, inset 0 1px 0 #ffffff22;
+}
+body.theme-diablo .tab-btn.active {
+    color: var(--df-gold-highlight);
+    background: linear-gradient(180deg, #4a1a12, #230b08);
+    border-color: var(--df-gold);
+    border-bottom: 2px solid var(--d2-blood-hot);
+}
+body.theme-diablo #fleeBtn { color: #f2c9c2; border-color: var(--d2-blood-hot); }
+body.theme-diablo .progress {
+    height: 7px;
+    background: #050302;
+    border: 1px solid #000;
+    box-shadow: 0 0 0 1px var(--d2-iron), inset 0 1px 3px #000;
+}
+body.theme-diablo .status-hp .progress-bar {
+    background-image: linear-gradient(180deg, #e0463d, #8c150f) !important;
+    background-color: #b8201c !important;
+    box-shadow: 0 0 6px #b8201c88;
+}
+body.theme-diablo .status-mana .progress-bar {
+    background-image: linear-gradient(180deg, #5b86e0, #1f3f93) !important;
+    background-color: #2c58c4 !important;
+    box-shadow: 0 0 6px #2c58c488;
+}
+body.theme-diablo .status-move .progress-bar {
+    background-image: linear-gradient(180deg, #d9a042, #7d5316) !important;
+    background-color: #a8742a !important;
+}
+body.theme-diablo .status-effect { background: #070504; border-color: var(--d2-iron); }
+body.theme-diablo .tab-btn,
+body.theme-diablo .settings-header h2,
+body.theme-diablo #mapTitle {
+    font-family: var(--df-font-title);
+    letter-spacing: 0.06em;
+    text-shadow: 0 1px 3px #000;
+}
+body.theme-diablo #targetName,
+body.theme-diablo #targetHp { text-shadow: 0 0 8px #a31d1566; }
+body.theme-diablo ::selection { color: #fff1d0; background: var(--d2-blood-hot); }
+body.theme-diablo ::-webkit-scrollbar-track { background: #070504; }
+body.theme-diablo ::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #3a3027, #5a4426);
+    border: 2px solid #070504;
+}
+body.theme-diablo #output,
+body.theme-diablo #output-top,
+body.theme-diablo #chatArea,
+body.theme-diablo .equipment-list,
+body.theme-diablo .inventory-list { scrollbar-color: #5a4426 #070504; }
+body.theme-diablo .mobile-numpad { background: #0b0807e6; border-color: var(--d2-gold-dim); }
+/* 設定面板: 預設是羊皮紙卷軸,D2 主題改成黑鐵皮革 + 金邊 */
+body.theme-diablo #settingsPanel {
+    color: var(--df-text);
+    background:
+        radial-gradient(ellipse at 50% 0, #3a120c66, transparent 70%),
+        repeating-linear-gradient(3deg, #1b1411 0, #211814 2px, #1b1411 5px);
+    border: 1px solid var(--d2-gold-dim);
+    box-shadow: 0 14px 38px #000, inset 0 0 0 1px #000, inset 0 0 0 2px #8a6d3b44, inset 0 0 40px #000a;
+    font-family: var(--df-font-title);
+}
+body.theme-diablo #settingsPanel::before,
+body.theme-diablo #settingsPanel::after {
+    background: linear-gradient(180deg, #2a1f18, var(--d2-gold-dim) 45%, #2a1f18);
+    box-shadow: 0 2px 4px #000a;
+}
+body.theme-diablo #settingsPanel h2 { color: var(--df-gold-highlight); }
+body.theme-diablo #settingsPanel label,
+body.theme-diablo #settingsPanel legend { color: var(--df-gold); }
+body.theme-diablo #settingsPanel .form-control,
+body.theme-diablo #settingsPanel .form-select,
+body.theme-diablo #settingsPanel #redeemCodeInput {
+    color: var(--df-text);
+    border-color: var(--d2-gold-dim);
+    background-color: #070504;
+}
+body.theme-diablo #settingsPanel fieldset { border-color: var(--d2-iron); background: #00000033; }
+body.theme-diablo #settingsPanel .form-check-input { border-color: var(--d2-gold-dim); background-color: #070504; }
+body.theme-diablo #settingsPanel .form-check-input:checked {
+    background-color: var(--d2-blood-hot);
+    border-color: var(--df-gold);
+}
