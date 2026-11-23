@@ -109,7 +109,7 @@ function confirmHeroAttr() {
     }
     setHeroAttrArmed(false);
     if (!isOpen()) {
-        setHeroAttrBanner('尚未連線,請稍後再試');
+        setHeroAttrBanner('尚未連線，請稍後再試');
         return;
     }
     heroAttr.pending = true;

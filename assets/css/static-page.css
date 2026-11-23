@@ -1,0 +1,43 @@
+/* 靜態說明頁 (about.html、privacy.html) 共用樣式:深色奇幻風,與遊戲主題一致;不依賴 JS */
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+    margin: 0;
+    color: #eadfc8;
+    background: radial-gradient(ellipse at 50% -10%, #3a2412 0, #120d09 55%, #0b0807 100%) fixed;
+    font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+    line-height: 1.8;
+}
+a { color: #f0c87a; text-underline-offset: 3px; }
+a:hover { color: #ffe3aa; }
+a:focus-visible { outline: 3px solid #ffd27a; outline-offset: 2px; border-radius: 3px; }
+.skip-link { position: absolute; left: 8px; top: -48px; padding: 8px 12px; color: #1a0f05; background: #f0c87a; border-radius: 6px; z-index: 10; }
+.skip-link:focus { top: 8px; }
+.site-header, .site-footer, main { width: min(820px, 100% - 32px); margin-inline: auto; }
+.site-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 18px 0 10px; border-bottom: 1px solid #5c4a26; }
+.site-title { margin: 0; font-family: Cinzel, Georgia, "Noto Serif TC", serif; font-size: 22px; letter-spacing: .05em; }
+.site-title a { color: #f3dc9b; text-decoration: none; }
+.site-nav { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 15px; }
+.site-nav a { padding: 6px 0; }
+.site-nav [aria-current="page"] { color: #fff; font-weight: 700; text-decoration: none; }
+main { padding: 24px 0 40px; }
+h1 { margin: 0 0 8px; color: #f3dc9b; font-size: 30px; line-height: 1.3; text-wrap: balance; }
+h2 { margin: 36px 0 8px; padding-bottom: 6px; color: #f3dc9b; font-size: 22px; border-bottom: 1px solid #5c4a26; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { margin: 22px 0 4px; color: #e8d3a0; font-size: 17px; }
+p, li { max-width: 68ch; }
+ul, ol { padding-left: 1.4em; }
+li { margin: 4px 0; }
+code { padding: 1px 5px; color: #f6e2b0; background: #2a1f14; border-radius: 4px; font-size: .92em; }
+.lead { color: #f1e7d3; font-size: 18px; }
+.meta { color: #b9a98a; font-size: 14px; }
+.cta { display: inline-block; margin: 8px 0; padding: 12px 22px; color: #2a1c0c; font-weight: 700; text-decoration: none; background: linear-gradient(180deg, #f0d79b, #c8a25a); border: 1px solid #f0d79b; border-radius: 8px; }
+.cta:hover { color: #2a1c0c; filter: brightness(1.08); }
+.card { margin: 16px 0; padding: 14px 18px; background: #1b140e; border: 1px solid #5c4a26; border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { padding: 8px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid #3a2c1f; }
+th { color: #e8d3a0; white-space: nowrap; }
+.site-footer { padding: 18px 0 40px; color: #b9a98a; font-size: 14px; border-top: 1px solid #5c4a26; }
+.site-footer nav { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 8px; }
+@media (max-width: 600px) { h1 { font-size: 25px; } .lead { font-size: 16px; } th { white-space: normal; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }

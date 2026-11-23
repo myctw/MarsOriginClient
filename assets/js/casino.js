@@ -192,12 +192,12 @@ function slotSpin() {
     if (slotPanel.hidden || slot.pending || slot.spinning) return;
     slotAutoTimer.stop(); // 倒數中手動按下:立刻轉,不再等倒數
     if (!isOpen()) {
-        setSlotBanner('尚未連線,請稍候再試', 'is-error');
+        setSlotBanner('尚未連線，請稍候再試', 'is-error');
         setSlotAuto(false);
         return;
     }
     if (slot.gold < slot.bet) {
-        setSlotBanner(`金幣不足,需要 ${slotFormat(slot.bet)} 金幣`, 'is-error');
+        setSlotBanner(`金幣不足，需要 ${slotFormat(slot.bet)} 金幣`, 'is-error');
         setSlotAuto(false);
         return;
     }
@@ -210,7 +210,7 @@ function slotSpin() {
     slot.pendingTimer = setTimeout(() => {
         slot.pending = false;
         setSlotAuto(false);
-        setSlotBanner('沒有收到結果,請再試一次', 'is-error');
+        setSlotBanner('沒有收到結果，請再試一次', 'is-error');
     }, SLOT_PENDING_TIMEOUT_MS);
 }
 
@@ -245,9 +245,9 @@ async function showSlotResult(data) {
     if (winAmount > 0) {
         const jackpot = data.combo === 'jackpot';
         showSlotWin(Array.isArray(data.winCells) ? data.winCells : [], jackpot);
-        setSlotBanner(`${data.label} ×${data.multiplier},獲得 ${slotFormat(winAmount)} 賭場代幣`, jackpot ? 'is-win is-jackpot' : 'is-win');
+        setSlotBanner(`${data.label} ×${data.multiplier}，獲得 ${slotFormat(winAmount)} 賭場代幣`, jackpot ? 'is-win is-jackpot' : 'is-win');
     } else {
-        setSlotBanner(`${reels.map(slotReelName).join(' - ')},沒有中獎`);
+        setSlotBanner(`${reels.map(slotReelName).join(' - ')}，沒有中獎`);
     }
 
     // 一輪不短於伺服器冷卻,避免減少動態效果時連點被伺服器擋下
@@ -339,8 +339,16 @@ const casino = {
     auto: false,
     requestedAt: 0,
     pendingTimer: null,
-    countdown: 0            // 自動下注倒數中的剩餘秒數 (0:沒有在倒數)
+    countdown: 0,           // 自動下注倒數中的剩餘秒數 (0:沒有在倒數)
+    autoPlay: true,         // 這張賭桌是否提供自動下注 (德州撲克要自己決定,不提供)
+    requiredGold: 0,        // 開局需要的金幣 (德州撲克 = 底注 × 3)
+    minRoundMs: 0,
+    phase: 'idle',          // 德州撲克:'decide' = 已發牌,等待跟注 / 棄牌
+    callAmount: 0,
+    decideLeft: 0,
+    decideTimer: null
 };
+const casinoDecision = $('casinoDecision');
 const casinoRandomDigit = () => Math.floor(Math.random() * 10);
 
 // 數字帶捲動 (矮人計數器):視窗只顯示一格,由 from 捲到 to;以計時器保底,動畫沒跑完也停在正確數字
@@ -572,7 +580,116 @@ const dwarfStage = {
     }
 };
 
-const CASINO_STAGES = { roulette: rouletteStage, goblin21: goblinStage, dwarfMine: dwarfStage };
+// ---------- 精靈德州撲克 ----------
+// 一手分兩段:deal (你的 2 張 + 翻牌 3 張,莊家蓋牌) → settle (轉牌、河牌、莊家手牌,標出勝方最好的 5 張)
+// 牌以 'As'、'Td' 表示:點數 23456789TJQKA + 花色 shdc
+const HD_SUIT = { s: '♠', h: '♥', d: '♦', c: '♣' };
+const HD_DEAL_STEP_MS = 160;
+const HD_REVEAL_STEP_MS = 320;
+const HD_OUTCOME_TEXT = {
+    win: '你贏了', lose: '莊家贏了', push: '平手', noQualify: '莊家不合格', fold: '你棄牌了', timeout: '逾時棄牌'
+};
+const holdemStage = {
+    mount() {
+        const slots = (n, cls = '') => `<div class="hd-card is-empty${cls}"></div>`.repeat(n);
+        const row = (side, who) => `
+            <div class="hd-row" data-side="${side}">
+                <span class="hd-who">${who}</span>
+                <div class="hd-cards">${slots(2)}</div>
+                <span class="hd-hand"></span>
+            </div>`;
+        casinoStage.innerHTML = `
+            <div class="hd-stage">
+                ${row('dealer', '發牌員')}
+                <div class="hd-board">${slots(5)}</div>
+                ${row('player', '你')}
+            </div>`;
+    },
+    reset() {
+        this.mount();
+    },
+    cardsOf(selector) {
+        return Array.from(casinoStage.querySelectorAll(`${selector} .hd-card`));
+    },
+    setCard(el, card) {
+        el.className = 'hd-card';
+        el.removeAttribute('data-card');
+        el.innerHTML = '';
+        if (card === 'back') {
+            el.classList.add('is-back');
+        } else if (!card) {
+            el.classList.add('is-empty');
+        } else {
+            const rank = card[0] === 'T' ? '10' : card[0];
+            const suit = card[1];
+            el.dataset.card = card;
+            el.classList.add(suit === 'h' || suit === 'd' ? 'is-red' : 'is-black');
+            el.innerHTML = `<span class="hd-rank">${rank}</span><span class="hd-suit">${HD_SUIT[suit] || ''}</span>`;
+        }
+    },
+    // 依序翻開:steps 為 [元素, 牌] 陣列
+    async reveal(steps, stepMs, reduceMotion) {
+        for (const [el, card] of steps) {
+            this.setCard(el, card);
+            if (!reduceMotion && card && card !== 'back') {
+                el.classList.add('is-dealt');
+                await slotWait(stepMs);
+            }
+        }
+    },
+    setLabel(side, text) {
+        casinoStage.querySelector(`.hd-row[data-side="${side}"] .hd-hand`).textContent = text || '';
+    },
+    async play(detail, { reduceMotion }) {
+        const playerEls = this.cardsOf('.hd-row[data-side="player"]');
+        const dealerEls = this.cardsOf('.hd-row[data-side="dealer"]');
+        const boardEls = this.cardsOf('.hd-board');
+        const player = detail.player || [];
+        const board = detail.board || [];
+        if (detail.phase === 'deal') {
+            this.mount();
+            const els = {
+                player: this.cardsOf('.hd-row[data-side="player"]'),
+                dealer: this.cardsOf('.hd-row[data-side="dealer"]'),
+                board: this.cardsOf('.hd-board')
+            };
+            els.dealer.forEach(el => this.setCard(el, 'back'));
+            await this.reveal([
+                [els.player[0], player[0]], [els.player[1], player[1]],
+                [els.board[0], board[0]], [els.board[1], board[1]], [els.board[2], board[2]]
+            ], HD_DEAL_STEP_MS, reduceMotion);
+            this.setLabel('player', detail.handName);
+            return;
+        }
+        // settle:補齊公牌與莊家手牌 (重新整理後也能從頭畫)
+        const steps = [];
+        player.forEach((card, i) => { if (playerEls[i]?.dataset.card !== card) steps.push([playerEls[i], card]); });
+        board.forEach((card, i) => { if (boardEls[i]?.dataset.card !== card) steps.push([boardEls[i], card]); });
+        (detail.dealer || []).forEach((card, i) => steps.push([dealerEls[i], card]));
+        await this.reveal(steps, HD_REVEAL_STEP_MS, reduceMotion);
+        this.setLabel('player', detail.playerHand?.name || '');
+        this.setLabel('dealer', detail.dealerHand ? `${detail.dealerHand.name}${detail.qualifies === false ? '(不合格)' : ''}` : '');
+
+        const rowOf = side => casinoStage.querySelector(`.hd-row[data-side="${side}"]`);
+        const markBest = (side, best5) => {
+            const scope = [...this.cardsOf(`.hd-row[data-side="${side}"]`), ...boardEls];
+            (best5 || []).forEach(card => scope.find(el => el.dataset.card === card)?.classList.add('is-best'));
+        };
+        const outcome = detail.outcome;
+        if (outcome === 'win' || outcome === 'noQualify') {
+            rowOf('player').classList.add('is-win');
+            markBest('player', detail.playerHand?.best5);
+        } else if (outcome === 'lose') {
+            rowOf('dealer').classList.add('is-win');
+            markBest('dealer', detail.dealerHand?.best5);
+        } else if (outcome === 'fold' || outcome === 'timeout') {
+            rowOf('player').classList.add('is-fold');
+        }
+        casinoStage.querySelector('.hd-stage').dataset.outcome = HD_OUTCOME_TEXT[outcome] || '';
+    }
+};
+
+const CASINO_STAGES = { roulette: rouletteStage, goblin21: goblinStage, dwarfMine: dwarfStage, holdem: holdemStage };
 const casinoReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 function setCasinoBanner(text, state = '') {
@@ -587,6 +704,14 @@ function updateCasinoBalance() {
 
 function updateCasinoControls() {
     const busy = casino.pending || casino.busy;
+    const deciding = casino.phase === 'decide';
+    casinoPlayButton.hidden = deciding;
+    casinoDecision.hidden = !deciding;
+    $('casinoCall').disabled = busy;
+    $('casinoFold').disabled = busy;
+    $('casinoCallHint').textContent = `再下 ${slotFormat(casino.callAmount)}`;
+    $('casinoFoldHint').textContent = casino.decideLeft > 0 ? `${casino.decideLeft} 秒後自動棄牌` : '輸掉底注';
+    casinoAutoButton.hidden = !casino.autoPlay;
     casinoPlayButton.disabled = busy;
     $('casinoPlayText').textContent = busy ? '進行中' : (casino.countdown > 0 ? String(casino.countdown) : (casino.playLabel || '下注'));
     $('casinoPlayHint').textContent = casino.countdown > 0 ? '秒後自動下注' : `下注 ${slotFormat(casino.bet)}`;
@@ -667,12 +792,13 @@ function casinoPlay() {
         return;
     }
     if (!isOpen()) {
-        setCasinoBanner('尚未連線,請稍候再試', 'is-error');
+        setCasinoBanner('尚未連線，請稍候再試', 'is-error');
         setCasinoAuto(false);
         return;
     }
-    if (casino.gold < casino.bet) {
-        setCasinoBanner(`金幣不足,需要 ${slotFormat(casino.bet)} 金幣`, 'is-error');
+    const required = casino.requiredGold || casino.bet;
+    if (casino.gold < required) {
+        setCasinoBanner(`金幣不足，需要 ${slotFormat(required)} 金幣`, 'is-error');
         setCasinoAuto(false);
         return;
     }
@@ -686,7 +812,7 @@ function casinoPlay() {
     casino.pendingTimer = setTimeout(() => {
         casino.pending = false;
         setCasinoAuto(false);
-        setCasinoBanner('沒有收到結果,請再試一次', 'is-error');
+        setCasinoBanner('沒有收到結果，請再試一次', 'is-error');
     }, CASINO_PENDING_TIMEOUT_MS);
 }
 
@@ -695,7 +821,53 @@ function isCasinoJackpot(game, detail, winAmount) {
     if (winAmount <= 0) return false;
     return (game === 'roulette' && detail.betType === 'number')
         || (game === 'goblin21' && detail.outcome === 'jackpot')
-        || (game === 'dwarfMine' && detail.betType === 'exact');
+        || (game === 'dwarfMine' && detail.betType === 'exact')
+        || (game === 'holdem' && Number(detail.playerHand?.rank) >= 7); // 四條以上
+}
+
+// 德州撲克:發牌後的決定倒數 (伺服器逾時會自動棄牌,這裡只是顯示)
+function startCasinoDecision(detail) {
+    clearInterval(casino.decideTimer);
+    casino.phase = 'decide';
+    casino.callAmount = Number(detail.call) || casino.bet * 2;
+    casino.decideLeft = Number(detail.timeoutSec) || 0;
+    if (casino.decideLeft > 0) {
+        casino.decideTimer = setInterval(() => {
+            casino.decideLeft = Math.max(0, casino.decideLeft - 1);
+            if (casino.decideLeft === 0) clearInterval(casino.decideTimer);
+            updateCasinoControls();
+        }, 1000);
+    }
+    updateCasinoControls();
+}
+
+function stopCasinoDecision() {
+    clearInterval(casino.decideTimer);
+    casino.decideTimer = null;
+    casino.decideLeft = 0;
+    casino.phase = 'idle';
+}
+
+function casinoDecide(command) {
+    if (casinoPanel.hidden || casino.pending || casino.busy || casino.phase !== 'decide') return;
+    if (!isOpen()) {
+        setCasinoBanner('尚未連線，請稍候再試', 'is-error');
+        return;
+    }
+    if (command === 'bet call' && casino.gold < casino.callAmount) {
+        setCasinoBanner(`金幣不足，跟注需要 ${slotFormat(casino.callAmount)} 金幣`, 'is-error');
+        return;
+    }
+    casino.pending = true;
+    casino.requestedAt = Date.now();
+    setCasinoBanner(command === 'bet call' ? '跟注中…' : '棄牌中…');
+    updateCasinoControls();
+    sendMessage(command, { silent: true });
+    casino.pendingTimer = setTimeout(() => {
+        casino.pending = false;
+        updateCasinoControls();
+        setCasinoBanner('沒有收到結果，請再試一次', 'is-error');
+    }, CASINO_PENDING_TIMEOUT_MS);
 }
 
 async function showCasinoResult(data) {
@@ -706,25 +878,35 @@ async function showCasinoResult(data) {
     casino.pending = false;
     casino.busy = true;
     updateCasinoControls();
-    setCasinoBanner('開獎中…');
     const winAmount = Number(data.winAmount) || 0;
     const detail = data.detail || {};
+    const isDeal = data.phase === 'deal';
+    if (!isDeal) stopCasinoDecision();
+    setCasinoBanner(isDeal ? '發牌中…' : '開獎中…');
     await CASINO_STAGES[casino.game]?.play(detail, { reduceMotion: casinoReduceMotion.matches, winAmount });
     casino.gold = Number(data.gold) || 0;
     casino.chips = Number(data.chips) || 0;
     updateCasinoBalance();
+    if (isDeal) {
+        // 德州撲克發完翻牌:等玩家決定,不走自動下注
+        casino.busy = false;
+        setCasinoBanner(`${data.summary || ''}。跟注 ${slotFormat(detail.call)} 金幣，或棄牌`);
+        startCasinoDecision(detail);
+        $('casinoCall').focus();
+        return;
+    }
     if (winAmount > 0) {
         const jackpot = isCasinoJackpot(casino.game, detail, winAmount);
-        setCasinoBanner(`${data.summary},獲得 ${slotFormat(winAmount)} 賭場代幣`, jackpot ? 'is-win is-jackpot' : 'is-win');
+        setCasinoBanner(`${data.summary}，獲得 ${slotFormat(winAmount)} 賭場代幣`, jackpot ? 'is-win is-jackpot' : 'is-win');
         if (jackpot) casinoPanel.classList.add('is-jackpot');
     } else {
         setCasinoBanner(data.summary || '沒有中獎');
     }
-    const remaining = CASINO_MIN_ROUND_MS - (Date.now() - casino.requestedAt);
+    const remaining = (casino.minRoundMs || CASINO_MIN_ROUND_MS) - (Date.now() - casino.requestedAt);
     if (remaining > 0) await slotWait(remaining);
     casino.busy = false;
     updateCasinoControls();
-    if (casino.auto && !casinoPanel.hidden) casinoAutoTimer.start();
+    if (casino.auto && casino.autoPlay && !casinoPanel.hidden) casinoAutoTimer.start();
 }
 
 function openCasinoPanel(data) {
@@ -739,6 +921,9 @@ function openCasinoPanel(data) {
     if (casino.option >= casino.options.length || !sameTable) casino.option = 0;
     casino.gold = Number(data.gold) || 0;
     casino.chips = Number(data.chips) || 0;
+    casino.autoPlay = data.autoPlay !== false;
+    casino.requiredGold = Number(data.requiredGold) || casino.bet;
+    casino.minRoundMs = Number(data.minRoundMs) || CASINO_MIN_ROUND_MS;
     casinoPanel.dataset.game = data.game;
     $('casinoTitle').textContent = data.title || '';
     $('casinoDealer').textContent = `${data.dealer || ''}・本桌每注 ${slotFormat(casino.bet)} 金幣`;
@@ -746,9 +931,18 @@ function openCasinoPanel(data) {
     renderCasinoPaytable(data.paytable, data.note);
     updateCasinoBalance();
     if (!sameTable) {
+        stopCasinoDecision();
         stage.mount();
         casinoPanel.classList.remove('is-jackpot');
-        setCasinoBanner(casino.options.length > 1 ? '選擇押注,按下按鈕開始' : '按下按鈕開始');
+        setCasinoBanner(casino.options.length > 1 ? '選擇押注，按下按鈕開始' : '按下按鈕開始');
+    }
+    if (data.pending) {
+        // 德州撲克還沒決定的牌局:直接畫出來,接著決定
+        stage.play(data.pending, { reduceMotion: true, winAmount: 0 });
+        setCasinoBanner(`目前牌型：${data.pending.handName || ''}。跟注 ${slotFormat(data.pending.call)} 金幣，或棄牌`);
+        startCasinoDecision(data.pending);
+    } else if (casino.phase === 'decide') {
+        stopCasinoDecision();
     }
     updateCasinoControls();
     casinoPanel.hidden = false;
@@ -759,6 +953,7 @@ function closeCasinoPanel() {
     casinoPanel.hidden = true;
     clearTimeout(casino.pendingTimer);
     casinoAutoTimer.stop();
+    stopCasinoDecision(); // 牌局仍在伺服器上,重新打開畫面會接著顯示
     casino.pending = false;
     casino.auto = false;
     updateCasinoControls();
@@ -780,6 +975,8 @@ function updateCasino(data) {
 }
 
 casinoPlayButton.addEventListener('click', casinoPlay);
+$('casinoCall').addEventListener('click', () => casinoDecide('bet call'));
+$('casinoFold').addEventListener('click', () => casinoDecide('bet fold'));
 casinoAutoButton.addEventListener('click', () => setCasinoAuto(!casino.auto));
 $('casinoClose').addEventListener('click', closeCasinoPanel);
 casinoNumberInput.addEventListener('keydown', event => {

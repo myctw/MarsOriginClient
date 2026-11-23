@@ -714,6 +714,109 @@
 
 @keyframes casino-draw-line { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
+/* --- 精靈德州撲克:月光、苔綠絨布、銀葉與星辰 --- */
+#casinoPanel[data-game="holdem"] {
+    --c-bg: #0a1412;
+    --c-backdrop:
+        radial-gradient(ellipse at 80% -10%, #cfe8ff2e, transparent 55%),
+        radial-gradient(circle at 12% 18%, #ffffff22 1px, transparent 2px),
+        radial-gradient(circle at 68% 8%, #ffffff1a 1px, transparent 2px);
+    --c-stage: radial-gradient(ellipse at 50% 40%, #1f4a3a 0%, #143428 60%, #0c2019 100%);
+    --c-surface: #12241f;
+    --c-frame: #8fb8a8;
+    --c-frame-hi: #e3f1ec;
+    --c-frame-lo: #24423a;
+    --c-glow: #bfe7ff66;
+    --c-text: #eef5f1;
+    --c-muted: #a9c4ba;
+    --c-play-a: #4f9a7e;
+    --c-play-b: #1f5442;
+    --c-play-shadow: #0d2a20;
+    --c-win: #f3e7a6;
+    --c-danger: #ffaf9e;
+    border-radius: 18px;
+}
+.hd-stage { position: relative; display: grid; gap: 10px; }
+.hd-row {
+    display: grid;
+    grid-template-columns: 64px auto 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: #00000026;
+    border: 1px solid #ffffff14;
+    border-radius: 12px;
+    transition: box-shadow .3s, opacity .3s;
+}
+.hd-row.is-win { box-shadow: 0 0 0 2px var(--c-win), 0 0 18px var(--c-glow); }
+.hd-row.is-fold { opacity: .55; }
+.hd-who { color: var(--c-muted); font-size: 14px; }
+.hd-hand { color: var(--c-frame-hi); font-weight: 700; text-align: right; }
+.hd-row.is-win .hd-hand { color: var(--c-win); }
+.hd-cards, .hd-board { display: flex; gap: 6px; }
+.hd-board { justify-content: center; padding: 8px 0; border-block: 1px dashed #ffffff1f; }
+.hd-card {
+    position: relative;
+    display: grid;
+    width: 46px;
+    height: 64px;
+    place-items: center;
+    align-content: center;
+    background: linear-gradient(160deg, #fbfaf4, #e7e3d4);
+    border: 1px solid #b9b3a0;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px #0008;
+    font-family: Georgia, "Noto Serif CJK TC", serif;
+    line-height: 1;
+}
+.hd-card.is-red { color: #b3261e; }
+.hd-card.is-black { color: #1c2422; }
+.hd-rank { font-size: 20px; font-weight: 700; }
+.hd-suit { font-size: 20px; }
+.hd-card.is-empty { background: #ffffff0a; border: 1px dashed #ffffff33; box-shadow: none; }
+.hd-card.is-back {
+    background:
+        repeating-linear-gradient(45deg, #2f6b57 0 4px, #24584a 4px 8px);
+    border: 2px solid #cfe3da;
+}
+.hd-card.is-back::after { content: "❦"; color: #e3f1ec; font-size: 22px; }
+.hd-card.is-dealt { animation: hd-deal .28s var(--c-ease-stop); }
+.hd-card.is-best { box-shadow: 0 0 0 2px var(--c-win), 0 0 12px var(--c-win); transform: translateY(-4px); }
+.hd-stage[data-outcome]:not([data-outcome=""])::after {
+    content: attr(data-outcome);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    padding: 2px 12px;
+    color: #10251d;
+    font-weight: 700;
+    background: var(--c-win);
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    opacity: .92;
+}
+@keyframes hd-deal { from { opacity: 0; transform: translateY(-14px) rotateY(80deg); } to { opacity: 1; transform: none; } }
+
+.casino-controls [hidden] { display: none !important; }
+.casino-decision { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.casino-decision .casino-play { min-height: 64px; font-size: 20px; }
+.casino-fold {
+    min-height: 64px;
+    color: var(--c-text);
+    font-size: 20px;
+    font-weight: 700;
+    background: var(--c-surface);
+    border: 2px solid var(--c-frame-lo);
+    border-radius: 12px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.casino-fold:hover:not(:disabled) { border-color: var(--c-frame); }
+.casino-fold:disabled { cursor: wait; opacity: .6; }
+.casino-fold:focus-visible { outline: 3px solid var(--c-win); outline-offset: 2px; }
+.casino-fold small { display: block; color: var(--c-muted); font-size: 12px; font-weight: 400; }
+
 @media (max-width: 600px) {
     #casinoPanel { padding: 10px 12px 12px; }
     .casino-body { grid-template-columns: 1fr; }
@@ -729,9 +832,16 @@
     .gb-die i { width: 8px; height: 8px; }
     .dw-stage { grid-template-columns: 1fr; }
     .dw-relation::after { display: none; }
+    .casino-decision { grid-column: 1 / -1; }
+    .hd-row { grid-template-columns: 1fr auto; }
+    .hd-who { grid-column: 1 / -1; }
+    .hd-card { width: 40px; height: 56px; }
+    .hd-rank, .hd-suit { font-size: 17px; }
+    .hd-board, .hd-cards { gap: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    #casinoPanel.is-jackpot, .gb-die.is-rolling { animation: none; }
+    #casinoPanel.is-jackpot, .gb-die.is-rolling, .hd-card.is-dealt { animation: none; }
+    .hd-card.is-best { transform: none; }
     .gb-row.is-win::after, .dw-relation.is-win::after { animation: none; transform: none; }
     .casino-switch, .casino-switch::after, .casino-play { transition: none; }
 }

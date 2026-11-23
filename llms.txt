@@ -3,6 +3,8 @@
 > 免費、免下載的西方奇幻 (劍與魔法) 網頁文字 MUD。玩家在瀏覽器中以文字指令探索世界、戰鬥、組隊與培養角色,最終挑戰龍族之王飛龍王夏佐。由 Eplis 獨立開發,自 2025 年起營運,介面為繁體中文。
 
 - 遊玩網址: https://marsorigin.myctw.cc/
+- 遊戲介紹與聯絡方式: https://marsorigin.myctw.cc/about.html
+- 隱私權政策: https://marsorigin.myctw.cc/privacy.html
 - 類型: MUD (Multi-User Dungeon)、文字角色扮演、多人線上、組隊合作
 - 平台: 電腦與手機瀏覽器 (需啟用 JavaScript;手機版有方向九宮格按鈕)
 - 費用: 免費,不需安裝

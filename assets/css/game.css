@@ -401,7 +401,17 @@ body.theme-dark-fantasy .status-combat[hidden] {
 #settingsPanel .account-row label { flex: 0 0 auto; margin: 0; }
 #settingsPanel .account-row .form-control { flex: 1 1 auto; min-width: 0; height: 30px; }
 #settingsPanel .account-mail { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#settingsPanel .account-mail-status { flex: 0 0 auto; font-size: 12px; }
+#settingsPanel .account-mail-status { flex: 0 0 auto; }
+/* 信箱驗證列:輸入框與按鈕同高 */
+#settingsPanel #verifyRow .form-control,
+#settingsPanel #verifyRow .settings-reset-button {
+    height: 30px;
+    min-height: 30px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    line-height: 1.2;
+    box-sizing: border-box;
+}
 #settingsPanel .account-danger { margin-top: 8px; color: #ff6b6b; border-color: #ff6b6b; }
 /* 修改密碼 (信箱驗證後顯示) */
 #settingsPanel .password-change { margin-top: 8px; padding-top: 8px; border-top: 1px solid #ffffff22; }
@@ -681,7 +691,7 @@ body.is-resizing-right-panel { cursor: col-resize; user-select: none; }
     --quick-focus: #ffd27a;
     --quick-shadow: 0 2px 8px #000c;
     position: fixed;
-    display: none;
+    display: flex;
     flex-direction: column-reverse;
     align-items: center;
     gap: 8px;

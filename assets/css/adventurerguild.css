@@ -1,0 +1,194 @@
+/* 冒險者商會畫面 (帳號角色、冒險者寄物櫃)。由 index.html 載入,結構見 #adventurerGuildPanel,程式在 adventurerGuild.js
+   風格:老舊的商會帳冊 — 皮革、羊皮紙、黃銅 */
+#adventurerGuildPanel {
+    --gd-bg: #1b140e;
+    --gd-surface: #2a2017;
+    --gd-surface-hi: #3a2c1f;
+    --gd-paper: #efe2c4;
+    --gd-ink: #3b2a18;
+    --gd-brass: #c8a25a;
+    --gd-brass-hi: #f0d79b;
+    --gd-brass-lo: #6a5226;
+    --gd-text: #f1e7d3;
+    --gd-muted: #c2b296;
+    --gd-ok: #b8e08a;
+    --gd-danger: #ffa08a;
+    --gd-moved: #8fd3ff;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 1050;
+    width: min(640px, calc(100vw - 16px));
+    max-height: calc(100dvh - 16px);
+    overflow-y: auto;
+    padding: 16px 18px 18px;
+    color: var(--gd-text);
+    background:
+        radial-gradient(ellipse at 50% -20%, #f0d79b22, transparent 60%),
+        repeating-linear-gradient(90deg, #ffffff04 0 2px, transparent 2px 38px),
+        var(--gd-bg);
+    border: 2px solid var(--gd-brass);
+    border-radius: 12px;
+    box-shadow: 0 0 0 4px var(--gd-bg), 0 0 0 5px var(--gd-brass-lo), 0 16px 40px #000c;
+    transform: translate(-50%, -50%);
+    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+#adventurerGuildPanel[hidden] { display: none; }
+
+.adventurerguild-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.adventurerguild-header h2 {
+    margin: 0;
+    color: var(--gd-brass-hi);
+    font-family: Cinzel, Georgia, "Noto Serif CJK TC", serif;
+    font-size: 22px;
+    letter-spacing: .06em;
+}
+.adventurerguild-sub { margin: 2px 0 0; color: var(--gd-muted); font-size: 13px; word-break: break-all; }
+.adventurerguild-close {
+    min-width: 40px;
+    min-height: 40px;
+    color: var(--gd-text);
+    font-size: 22px;
+    line-height: 1;
+    background: var(--gd-surface);
+    border: 1px solid var(--gd-brass-lo);
+    border-radius: 8px;
+    cursor: pointer;
+}
+.adventurerguild-close:hover { border-color: var(--gd-brass); }
+
+.adventurerguild-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.adventurerguild-column {
+    min-width: 0;
+    padding: 10px;
+    background: var(--gd-paper);
+    border: 1px solid var(--gd-brass-lo);
+    border-radius: 8px;
+    box-shadow: inset 0 0 18px #6a522633;
+}
+.adventurerguild-column-title { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 8px; color: var(--gd-ink); font-size: 15px; font-weight: 700; }
+.adventurerguild-count { color: #7a5c30; font-size: 13px; font-variant-numeric: tabular-nums; }
+.adventurerguild-list { display: grid; gap: 6px; max-height: 300px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.adventurerguild-empty { padding: 8px; color: #8a7553; font-size: 13px; text-align: center; }
+.adventurerguild-item {
+    display: grid;
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 10px;
+    color: var(--gd-ink);
+    text-align: left;
+    background: #fff8e8;
+    border: 1px solid #c9b48a;
+    border-radius: 6px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.adventurerguild-item:hover:not(:disabled) { border-color: var(--gd-brass-lo); background: #fffdf5; }
+.adventurerguild-item:focus-visible { outline: 3px solid #2f7fc0; outline-offset: 1px; }
+.adventurerguild-item:disabled { cursor: not-allowed; opacity: .55; }
+.adventurerguild-item.is-moved { border-color: #2f7fc0; box-shadow: inset 4px 0 0 #2f7fc0; }
+.adventurerguild-item-main { font-size: 14px; font-weight: 700; word-break: break-all; }
+.adventurerguild-item-sub { color: #7a6748; font-size: 12px; }
+
+.adventurerguild-note { margin: 10px 0 0; color: var(--gd-muted); font-size: 13px; line-height: 1.6; }
+.adventurerguild-banner {
+    margin-top: 10px;
+    padding: 8px 10px;
+    color: var(--gd-text);
+    background: var(--gd-surface);
+    border: 1px solid var(--gd-brass-lo);
+    border-radius: 6px;
+    font-size: 14px;
+}
+.adventurerguild-banner.is-ok { color: var(--gd-ok); border-color: var(--gd-ok); }
+.adventurerguild-banner.is-error { color: var(--gd-danger); border-color: var(--gd-danger); }
+
+.adventurerguild-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.adventurerguild-cost { color: var(--gd-muted); font-size: 14px; }
+.adventurerguild-cost strong { color: var(--gd-brass-hi); font-size: 18px; font-variant-numeric: tabular-nums; }
+.adventurerguild-cost strong.is-short { color: var(--gd-danger); }
+.adventurerguild-gold { margin-left: 6px; font-size: 13px; }
+.adventurerguild-actions { display: flex; gap: 8px; }
+.adventurerguild-reset, .adventurerguild-confirm {
+    min-width: 96px;
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.adventurerguild-reset { color: var(--gd-text); background: var(--gd-surface); border: 1px solid var(--gd-brass-lo); }
+.adventurerguild-confirm { color: #2a1c0c; background: linear-gradient(180deg, var(--gd-brass-hi), var(--gd-brass)); border: 1px solid var(--gd-brass-hi); }
+.adventurerguild-reset:disabled, .adventurerguild-confirm:disabled { cursor: not-allowed; opacity: .5; }
+.adventurerguild-reset:focus-visible, .adventurerguild-confirm:focus-visible, .adventurerguild-close:focus-visible { outline: 3px solid var(--gd-moved); outline-offset: 2px; }
+
+/* 寄物櫃存款 */
+.adventurerguild-goldbox {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px;
+    background: var(--gd-surface);
+    border: 1px solid var(--gd-brass-lo);
+    border-radius: 8px;
+}
+.adventurerguild-goldbox[hidden] { display: none; }
+.adventurerguild-goldbox-info { color: var(--gd-muted); font-size: 14px; }
+.adventurerguild-goldbox-info strong { color: var(--gd-brass-hi); font-size: 18px; font-variant-numeric: tabular-nums; }
+.adventurerguild-goldbox-form { display: flex; gap: 6px; }
+.adventurerguild-goldbox-form input {
+    width: 140px;
+    min-height: 40px;
+    padding: 0 8px;
+    color: var(--gd-ink);
+    background: var(--gd-paper);
+    border: 1px solid var(--gd-brass-lo);
+    border-radius: 6px;
+    font-size: 15px;
+}
+.adventurerguild-mini {
+    min-height: 40px;
+    padding: 0 12px;
+    color: var(--gd-text);
+    font-size: 14px;
+    font-weight: 700;
+    background: var(--gd-surface-hi);
+    border: 1px solid var(--gd-brass-lo);
+    border-radius: 6px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.adventurerguild-mini:hover:not(:disabled) { border-color: var(--gd-brass); }
+.adventurerguild-mini:disabled { cursor: not-allowed; opacity: .5; }
+.adventurerguild-mini.is-armed { color: #2a1c0c; background: var(--gd-brass-hi); border-color: var(--gd-brass-hi); }
+.adventurerguild-mini:focus-visible { outline: 3px solid var(--gd-moved); outline-offset: 2px; }
+
+/* 訂閱擴充 */
+.adventurerguild-subbox { margin-top: 12px; padding: 8px 10px; background: var(--gd-surface); border: 1px solid var(--gd-brass-lo); border-radius: 8px; }
+.adventurerguild-subbox[hidden] { display: none; }
+.adventurerguild-subbox summary { min-height: 32px; padding: 4px 0; color: var(--gd-brass-hi); font-weight: 700; cursor: pointer; }
+.adventurerguild-sub-state { margin-left: 6px; color: var(--gd-muted); font-size: 13px; font-weight: 400; }
+.adventurerguild-sub-rule { margin: 6px 0 8px; color: var(--gd-muted); font-size: 13px; line-height: 1.6; }
+.adventurerguild-sub-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.adventurerguild-sub-table th { padding: 4px 6px; color: var(--gd-muted); font-weight: 400; text-align: left; border-bottom: 1px solid var(--gd-brass-lo); }
+.adventurerguild-sub-table td { padding: 4px 6px; border-bottom: 1px solid #ffffff10; font-variant-numeric: tabular-nums; }
+.adventurerguild-sub-table td:last-child { text-align: right; }
+.adventurerguild-sub-table tr.is-current td { color: var(--gd-brass-hi); font-weight: 700; }
+.adventurerguild-sub-table .adventurerguild-mini { min-height: 34px; padding: 0 10px; font-size: 13px; }
+#adventurerGuildSubCancel { margin-top: 8px; }
+#adventurerGuildSubCancel[hidden] { display: none; }
+
+@media (max-width: 600px) {
+    #adventurerGuildPanel { padding: 12px; }
+    .adventurerguild-goldbox-form { width: 100%; }
+    .adventurerguild-goldbox-form input { flex: 1; width: auto; }
+    .adventurerguild-columns { grid-template-columns: 1fr; }
+    .adventurerguild-list { max-height: 30vh; }
+    .adventurerguild-footer { flex-direction: column; align-items: stretch; }
+    .adventurerguild-actions > button { flex: 1; }
+}

@@ -419,7 +419,7 @@ function openAreaMapWindow() {
     if (!mapState.data?.areaRooms) return;
     if (areaWinOpen()) { areaWin.focus(); return; }
     areaWin = window.open('', 'marsAreaMap', 'popup=yes,width=1200,height=800');
-    if (!areaWin) { alert('瀏覽器擋住了彈出視窗,請允許此網站開啟彈出視窗'); return; }
+    if (!areaWin) { alert('瀏覽器擋住了彈出視窗，請允許此網站開啟彈出視窗'); return; }
     areaWin.document.open();
     areaWin.document.write(AREA_WIN_HTML);
     areaWin.document.close();
@@ -832,10 +832,12 @@ const STATUS_KEYS = STATUS_OPTIONS.map(([key]) => key);
 const EFFECT_KEYS = ['poison', 'burn', 'bleed'];
 const COMBAT_KEYS = ['armor', 'damroll', 'hitroll', 'str', 'int', 'dex', 'wis', 'con'];
 const THEMES = { green: 'green', white: 'rgb(255, 255, 255)', 'dark-fantasy': null, diablo: null };
-const allStatusVisible = () => Object.fromEntries(STATUS_KEYS.map(key => [key, true]));
+// 預設只顯示生命、法力、體力與等級,其餘由玩家在設定中自行勾選
+const DEFAULT_STATUS_KEYS = ['hp', 'mana', 'move', 'level'];
+const defaultStatusVisible = () => Object.fromEntries(STATUS_KEYS.map(key => [key, DEFAULT_STATUS_KEYS.includes(key)]));
 const currentSettings = {
     account: '', password: '', notifyChat: false, dotAnim: true, hotAnim: true,
-    status: allStatusVisible(), theme: 'green'
+    status: defaultStatusVisible(), theme: 'green'
 };
 // 持續傷害 / 持續治療動畫開關 (預設開啟)
 const ANIM_SETTINGS = { dotAnim: $('dotAnimSetting'), hotAnim: $('hotAnimSetting') };
@@ -1028,7 +1030,7 @@ async function initializeSettings() {
             currentSettings[key] = box.checked = stored[key] !== false;
         }
         currentSettings.status = Object.fromEntries(STATUS_KEYS.map(key => [
-            key, typeof stored.status?.[key] === 'boolean' ? stored.status[key] : true
+            key, typeof stored.status?.[key] === 'boolean' ? stored.status[key] : DEFAULT_STATUS_KEYS.includes(key)
         ]));
         notifySetting.checked = currentSettings.notifyChat;
         applyTheme(stored.theme);
@@ -1052,7 +1054,7 @@ async function initializeSettings() {
 function updateSavedAccountLabel() {
     const remembered = Boolean(currentSettings.account && currentSettings.password);
     savedAccountLabel.textContent = remembered
-        ? `已記住帳號:${currentSettings.account}`
+        ? `已記住帳號：${currentSettings.account}`
         : '尚未記住帳號 (在登入畫面勾選「記住我」)';
     forgetAccountButton.hidden = !remembered;
 }
@@ -1139,7 +1141,7 @@ $('settingsReset').addEventListener('click', () => {
     currentSettings.password = '';
     passwordChanged = true;
     updateSavedAccountLabel();
-    setStatusCheckboxes(allStatusVisible());
+    setStatusCheckboxes(defaultStatusVisible());
     applyStatusSettings();
     applyTheme('dark-fantasy');
     queueSettingsSave();
@@ -1228,7 +1230,7 @@ function updateChat(data) {
                 const notification = new Notification('Mars: Origin', { body: message, icon: './assets/images/MO_ICON2.png' });
                 setTimeout(() => notification.close(), 8000);
             } catch (error) {
-                console.error('無法顯示訊息通知:', error);
+                console.error('無法顯示訊息通知：', error);
             }
         }
     }
@@ -1299,7 +1301,7 @@ function updateRoomInteract(data) {
     const single = roomInteractItems.length === 1;
     interactButton.dataset.cmd = single && roomInteractItems[0].cmd ? roomInteractItems[0].cmd : '';
     interactButton.title = single
-        ? `互動:${roomInteractItems[0].label || ''}`
+        ? `互動：${roomInteractItems[0].label || ''}`
         : `互動 (${roomInteractItems.length} 個對象)`;
     interactButton.hidden = false;
     layoutInteractButton();
@@ -1789,6 +1791,8 @@ const MESSAGE_HANDLERS = {
     casino: data => updateCasino(data),
     // 英雄額外屬性點數的分配畫面在 hero.js
     heroAttr: data => updateHeroAttrPanel(data),
+    // 冒險者商會 (帳號角色、寄物櫃) 在 adventurerguild.js
+    adventurerGuild: data => updateAdventurerGuildPanel(data),
     // 登入 / 創角畫面在 auth.js (自動登入也在那裡,不再比對文字提示)
     auth: data => updateAuth(data),
     // 城鎮地圖 (查看 / 使用地圖物品) 在 areamap.js
@@ -1816,7 +1820,7 @@ function connect() {
     socket.onopen = () => {
         diagOnOpen(socket);
         // 原本指向不存在的 logo.jpg (404);改用與登入畫面、分享預覽相同的 og-image.jpg,相對路徑本機也看得到
-        appendOutput('<p><img class="welcome-banner" src="./assets/images/og-image.jpg" width="1200" height="630" alt="瑪爾斯群英傳:起源 Mars: Origin"></p>');
+        appendOutput('<p><img class="welcome-banner" src="./assets/images/og-image.jpg" width="1200" height="630" alt="瑪爾斯群英傳：起源 Mars: Origin"></p>');
         resetInactivityTimer();
         console.log(`[WS ${new Date().toISOString()}] OPEN url=${SERVER_URL}`);
     };
@@ -1856,7 +1860,7 @@ function connect() {
 
     socket.onerror = error => {
         diagEvent('error');
-        console.error('WebSocket 錯誤:', error);
+        console.error('WebSocket 錯誤：', error);
     };
 }
 
@@ -1964,7 +1968,7 @@ document.addEventListener('click', event => {
         if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
         if (target.closest('#settingsPanel') && !target.closest('#settingsClose, #settingsReset')) return;
         // 轉輪機 / 賭桌 / 英雄屬性 / 登入畫面:焦點留在面板內,鍵盤可以直接操作
-        if (target.closest('#slotPanel, #casinoPanel, #heroAttrPanel, #authPanel, #areaMapPanel')) return;
+        if (target.closest('#slotPanel, #casinoPanel, #heroAttrPanel, #adventurerGuildPanel, #authPanel, #areaMapPanel')) return;
         if (!isCommandLink && target.closest('#output-container, #chatArea')) return;
         const selection = window.getSelection();
         if (selection && !selection.isCollapsed && !isCommandLink) return;

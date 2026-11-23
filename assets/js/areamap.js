@@ -90,8 +90,8 @@ async function openAreaMap(data) {
     const requestId = ++areaMap.requestId;
     $('areaMapTitle').textContent = data.title || '地圖';
     $('areaMapHint').textContent = data.currentRoomId
-        ? '紅圈是你目前的位置;拖曳移動地圖,用 + / − 縮放'
-        : '拖曳移動地圖;用 + / − 縮放';
+        ? '紅圈是你目前的位置；拖曳移動地圖，用 + / − 縮放'
+        : '拖曳移動地圖；用 + / − 縮放';
     areaMapCanvas.replaceChildren();
     areaMapPanel.hidden = false;
     areaMapViewport.focus({ preventScroll: true });

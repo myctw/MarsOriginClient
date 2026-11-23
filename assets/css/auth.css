@@ -332,3 +332,11 @@
 @media (prefers-reduced-motion: reduce) {
     #authPanel * { transition: none !important; }
 }
+
+/* 登入畫面底部:簡短介紹與站內連結 (關於 / 聯絡 / 隱私權政策) */
+.auth-footer { display: grid; gap: 4px; justify-items: center; margin-top: 12px; padding-top: 12px; color: var(--au-muted); font-size: 13px; text-align: center; border-top: 1px solid var(--au-gold-lo); }
+.auth-footer p { margin: 0; max-width: 46ch; line-height: 1.6; }
+.auth-footer nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; }
+.auth-footer a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; color: var(--au-muted); text-underline-offset: 3px; }
+.auth-footer a:hover { color: var(--au-text); }
+.auth-footer a:focus-visible { outline: 2px solid var(--au-gold); outline-offset: 1px; }

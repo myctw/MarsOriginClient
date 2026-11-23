@@ -131,7 +131,7 @@ function closeAuthPanel() {
 
 function sendAuthOrFail(payload, errorElement) {
     if (sendAuth(payload)) return true;
-    setFormError(errorElement, '尚未連線,請稍候重新連線或重新整理頁面。');
+    setFormError(errorElement, '尚未連線，請稍候重新連線或重新整理頁面。');
     return false;
 }
 
@@ -192,7 +192,7 @@ function validateAuthStep(step) {
         const password = $('authPassword').value;
         let ok = true;
         if (!AUTH_RULES.name.test(name)) {
-            setFieldError('name', `帳號格式不符:${auth.config.rules.name}`);
+            setFieldError('name', `帳號格式不符：${auth.config.rules.name}`);
             ok = false;
         } else if (auth.nameStatus?.name.toLowerCase() === name.toLowerCase() && !auth.nameStatus.available) {
             setFieldError('name', auth.nameStatus.message);
@@ -201,7 +201,7 @@ function validateAuthStep(step) {
             setFieldError('name', null);
         }
         if (!AUTH_RULES.password.test(password)) {
-            setFieldError('password', `密碼格式不符:${auth.config.rules.password}`);
+            setFieldError('password', `密碼格式不符：${auth.config.rules.password}`);
             ok = false;
         } else {
             setFieldError('password', null);
@@ -217,7 +217,7 @@ function validateAuthStep(step) {
     if (step === 2) {
         let ok = true;
         if (!AUTH_RULES.cnName.test($('authCnName').value.trim())) {
-            setFieldError('cnName', `中文名字格式不符:${auth.config.rules.cnName}`);
+            setFieldError('cnName', `中文名字格式不符：${auth.config.rules.cnName}`);
             ok = false;
         } else {
             setFieldError('cnName', null);
@@ -283,7 +283,7 @@ function onAuthNameInput() {
     const name = $('authName').value.trim();
     if (!name) return setFieldError('name', null);
     if (!AUTH_RULES.name.test(name)) {
-        setAuthHint('authNameHint', `格式:${auth.config.rules.name}`, null);
+        setAuthHint('authNameHint', `格式：${auth.config.rules.name}`, null);
         return;
     }
     setAuthHint('authNameHint', '檢查中…', null);
@@ -411,9 +411,9 @@ function openAuthPanel(data) {
         rules: data.rules || {}
     };
     auth.defaultHints = {
-        authNameHint: `格式:${auth.config.rules.name || ''}`,
-        authPasswordHint: `格式:${auth.config.rules.password || ''}`,
-        authCnNameHint: `格式:${auth.config.rules.cnName || ''}`,
+        authNameHint: `格式：${auth.config.rules.name || ''}`,
+        authPasswordHint: `格式：${auth.config.rules.password || ''}`,
+        authCnNameHint: `格式：${auth.config.rules.cnName || ''}`,
         authMailHint: auth.config.rules.mail || '',
         authAttrHint: $('authAttrHint').dataset.default || $('authAttrHint').textContent
     };
