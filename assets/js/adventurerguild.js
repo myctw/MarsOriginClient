@@ -4,6 +4,9 @@
 //   account { mail, limit, removeFee, gold, members: [角色], others: [角色], message? }   帳號角色畫面
 //   locker  { capacity, withdrawFee, gold, inventoryMax, locker: [物品], inventory: [物品], message? }  寄物櫃畫面
 //   error   { message, close }
+//   account 帶 toggle (角色名稱):文字指令 adventurerguild account <角色>,把該角色移到另一區 (畫面已開著就沿用目前的暫存)
+//   confirmAccount:文字指令 adventurerguild account ok,等同按「儲存」
+//   暫存 (left / right) 只在畫面上,關閉畫面就放棄;送出後由伺服器逐一檢查,不符合就全部退回
 //   角色 { name, cnName, level, className, online, self };物品 { uid, label, count, locked?, reason? }
 //   兩種畫面另外帶 storedGold (寄物櫃存款)、subscription (訂閱擴充:level、fees[1~10]、paidUntil…)、suspended (欠費暫停中)
 // 點選名稱 / 物品在兩區之間移動 (只改畫面),按儲存 / 確認才送出結構化訊息:
@@ -124,22 +127,25 @@ function moveAdventurerGuildItem(side, index) {
     const from = side === 'left' ? adventurerGuild.left : adventurerGuild.right;
     const to = side === 'left' ? adventurerGuild.right : adventurerGuild.left;
     const item = from[index];
-    if (!item || item.locked) return;
+    if (!item || item.locked) return { ok: false };
     if (side === 'right') {
         // 移入帳號 / 寄物櫃:檢查上限
         const limit = adventurerGuild.mode === 'account' ? adventurerGuild.data.limit : adventurerGuild.data.capacity;
         if (adventurerGuild.left.length >= limit) {
-            setAdventurerGuildBanner(adventurerGuild.mode === 'account' ? `帳號最多 ${limit} 個角色` : `寄物櫃只有 ${limit} 格`, 'error');
-            return;
+            const message = adventurerGuild.mode === 'account' ? `帳號最多 ${limit} 個角色` : `寄物櫃只有 ${limit} 格`;
+            setAdventurerGuildBanner(message, 'error');
+            return { ok: false, message };
         }
     } else if (adventurerGuild.mode === 'locker' && adventurerGuild.data.inventoryMax && adventurerGuild.right.length >= adventurerGuild.data.inventoryMax) {
-        setAdventurerGuildBanner(`背包只能放 ${adventurerGuild.data.inventoryMax} 件`, 'error');
-        return;
+        const message = `背包只能放 ${adventurerGuild.data.inventoryMax} 件`;
+        setAdventurerGuildBanner(message, 'error');
+        return { ok: false, message };
     }
     from.splice(index, 1);
     to.push(item);
     setAdventurerGuildBanner('');
     renderAdventurerGuild();
+    return { ok: true };
 }
 
 function renderAdventurerGuild() {
@@ -322,9 +328,71 @@ function openAdventurerGuildPanel(mode, data) {
     $('adventurerGuildClose').focus();
 }
 
+// 關閉畫面就放棄還沒送出的暫存 (之後的 adventurerguild account <角色> / ok 都從伺服器的最新資料重新開始)
 function closeAdventurerGuildPanel() {
     adventurerGuildPanel.hidden = true;
     adventurerGuild.pending = false;
+    adventurerGuild.mode = '';
+    adventurerGuild.data = null;
+    adventurerGuild.left = [];
+    adventurerGuild.right = [];
+}
+
+// ---------- 文字指令:adventurerguild account <角色> / adventurerguild account ok ----------
+function isAccountPanelOpen() {
+    return !adventurerGuildPanel.hidden && adventurerGuild.mode === 'account' && Boolean(adventurerGuild.data);
+}
+
+// 每次切換後在輸出區列出兩區名單、人數、預計費用,並提醒還沒儲存
+function printAdventurerGuildAccountStatus(headline) {
+    const d = adventurerGuild.data;
+    const names = list => list.map(c => escapeHtml(`${c.cnName || c.name}(${c.name})`)).join('、') || '無';
+    const cost = adventurerGuildCost();
+    const lines = [
+        headline,
+        `帳號角色 (${adventurerGuild.left.length}/${d.limit}):${names(adventurerGuild.left)}`,
+        `非帳號角色:${names(adventurerGuild.right)}`
+    ];
+    if (adventurerGuildChanged()) {
+        lines.push(`預計費用:${adventurerGuildFormat(cost)} 金幣 (持有 ${adventurerGuildFormat(d.gold)})${(d.gold || 0) < cost ? ' <span style="color: red;">金幣不足</span>' : ''}`);
+        lines.push('<span style="color: yellow;">尚未儲存:輸入 adventurerguild account ok 儲存,關閉畫面即放棄變更。</span>');
+    } else {
+        lines.push('帳號角色與目前相同,沒有需要儲存的變更。');
+    }
+    appendOutput(`${lines.join('\n')}\n`);
+}
+
+function toggleAdventurerGuildAccount(data) {
+    // 畫面已經開著同一個帳號:沿用目前的暫存;否則用伺服器的最新資料開啟
+    if (!isAccountPanelOpen() || adventurerGuild.data.mail !== data.mail || adventurerGuild.pending) {
+        openAdventurerGuildPanel('account', { ...data, toggle: undefined });
+        // 文字指令開的畫面:焦點留在輸入框,方便接著輸入下一個角色或 ok
+        inputBox.focus({ preventScroll: true });
+    }
+    const name = data.toggle;
+    const leftIndex = adventurerGuild.left.findIndex(c => c.name === name);
+    const side = leftIndex >= 0 ? 'left' : 'right';
+    const index = leftIndex >= 0 ? leftIndex : adventurerGuild.right.findIndex(c => c.name === name);
+    if (index < 0) {
+        appendOutput(`<span style="color: red;">找不到角色 ${escapeHtml(name)}。</span>\n`);
+        return;
+    }
+    const item = (side === 'left' ? adventurerGuild.left : adventurerGuild.right)[index];
+    const label = escapeHtml(`${item.cnName || item.name}(${item.name})`);
+    const result = moveAdventurerGuildItem(side, index);
+    if (!result.ok) {
+        printAdventurerGuildAccountStatus(`<span style="color: red;">無法移入 ${label}:${escapeHtml(result.message || '')}</span>`);
+        return;
+    }
+    printAdventurerGuildAccountStatus(side === 'left' ? `${label} 移到非帳號角色區。` : `${label} 移到帳號角色區。`);
+}
+
+function confirmAdventurerGuildAccount() {
+    if (!isAccountPanelOpen() || !adventurerGuildChanged()) {
+        appendOutput('沒有尚未儲存的帳號角色變更。(先輸入 adventurerguild account &lt;角色&gt; 移動角色)\n');
+        return;
+    }
+    confirmAdventurerGuild();
 }
 
 function resetAdventurerGuild() {
@@ -347,8 +415,12 @@ function confirmAdventurerGuild() {
 }
 
 function updateAdventurerGuildPanel(data) {
-    if (data.action === 'account' || data.action === 'locker') {
+    if (data.action === 'account' && data.toggle) {
+        toggleAdventurerGuildAccount(data);
+    } else if (data.action === 'account' || data.action === 'locker') {
         openAdventurerGuildPanel(data.action, data);
+    } else if (data.action === 'confirmAccount') {
+        confirmAdventurerGuildAccount();
     } else if (data.action === 'error') {
         if (adventurerGuildPanel.hidden) return;
         adventurerGuild.pending = false;

@@ -527,19 +527,18 @@ function setChatAreaHeight() {
     rightPanelResizer.hidden = getComputedStyle(rightPanel).display === 'none';
 
     layoutNumpad();
-    layoutBossEventButton();
     layoutQuickBar();
-    layoutInteractButton();
+    positionActionMenu();
 }
 const relayout = () => window.requestAnimationFrame(setChatAreaHeight);
 
-// ===== 可拖曳的浮動元件 (懸浮按鈕、快捷指令列、手機方向鍵) =====
+// ===== 可拖曳的浮動元件 (快捷指令列、手機方向鍵) =====
 // 整個元件都能拖:移動超過門檻才算拖曳 (觸控 10px,滑鼠 4px),拖曳結束的那次 click 不送出指令。
 // 拖曳過的位置存 localStorage (storageKey),沒拖曳過時用 getDefault() 回傳的 { left / right / top / bottom } (px)。
 // 位置一律限制在視窗內;旋轉螢幕或視窗變小時重新 layout 會拉回畫面中。
 // 開始拖曳後才 setPointerCapture:一開始就捕捉的話,點群組裡的按鈕時 click 會落在外層元件,按鈕收不到。
 // anchor: 'top' 以上緣定位 (預設);'bottom' 以下緣定位,元件變高時往上長 (快捷指令列展開時下緣不動)
-// enabled: 回傳 false 時不能拖、也不設定位置 (例如手機版 [互動] 按鈕放進快捷指令列,由外層一起拖)
+// enabled: 回傳 false 時不能拖、也不設定位置
 const DRAG_THRESHOLD = { touch: 10, pen: 6, mouse: 4 };
 const draggables = [];
 function makeDraggable(el, storageKey, getDefault, { onDragStart, anchor = 'top', enabled = () => true } = {}) {
@@ -657,53 +656,10 @@ const numpadDrag = makeDraggable(numpad, 'marsII.numpadPos', () => ({ top: NUMPA
 function layoutNumpad() {
     numpadDrag.layout();
 }
-// 方向鍵預設位置的下緣 (懸浮按鈕預設排在它下面;方向鍵被拖走後懸浮按鈕留在原處,不跟著跑)
-const numpadDefaultBottom = () => NUMPAD_MARGIN + numpad.offsetHeight;
 
-// 懸浮按鈕 (活動傳送、互動) 預設在 chatArea 正上方 (位置依 chatArea 實際位置即時計算)
-// 沒拖曳過時:桌機在 chatArea 右上方,手機在畫面右上方 (方向鍵預設位置的下方)
-// slot: 預設位置從右邊數來第幾格 (0 = 最右),避免多個按鈕疊在一起
-// onDragStart: 開始拖曳時呼叫 (例如收起按鈕的選單)
-function makeFloatingButton(button, storageKey, slot, { onDragStart, enabled } = {}) {
-    const SLOT_WIDTH = 52;
-    return makeDraggable(button, storageKey, () => {
-        if (isMobileLayout()) {
-            return { right: 8 + slot * SLOT_WIDTH, top: numpadDefaultBottom() + 8 };
-        }
-        const rect = chatArea.getBoundingClientRect();
-        return {
-            right: Math.max(8, window.innerWidth - rect.right + 10) + slot * SLOT_WIDTH,
-            bottom: Math.max(8, window.innerHeight - rect.top + 8)
-        };
-    }, { onDragStart, enabled });
-}
-
-// [互動] 按鈕:桌機是獨立的懸浮按鈕;手機版移進快捷指令列最下面,跟著快捷列一起拖 (見 syncInteractButtonHost)
-const interactButtonHome = { parent: interactButton.parentNode, next: interactButton.nextSibling };
-const isInteractInQuickBar = () => interactButton.parentNode === $('quickBar');
-const bossEventFloat = makeFloatingButton(bossEventButton, 'marsII.bossEventButtonPos', 0);
-const interactFloat = makeFloatingButton(interactButton, 'marsII.interactButtonPos', 1, {
-    onDragStart: () => { if (actionMenuOwner === interactButton) hideActionMenu(); },
-    enabled: () => !isInteractInQuickBar()
-});
-function layoutBossEventButton() {
-    bossEventFloat.layout();
-}
-function syncInteractButtonHost() {
-    const wantInBar = isMobileLayout();
-    if (wantInBar === isInteractInQuickBar()) return;
-    if (wantInBar) quickBar.prepend(interactButton);
-    else interactButtonHome.parent.insertBefore(interactButton, interactButtonHome.next);
-}
-function layoutInteractButton() {
-    syncInteractButtonHost();
-    interactFloat.layout();
-    positionActionMenu();
-}
-
-// ===== 快捷指令列 (手機版) =====
-// 直向排列,由下往上:[互動]、攻擊、開關,展開時狀態 / 物品 / 裝備 / 任務從開關上方往上長出來,再點開關收回。
-// 預設收合,在輸出區右下角;整組一起拖曳,以下緣定位 (展開、收合時開關與攻擊不會移動)。
+// ===== 快捷指令列 =====
+// 最下面一列由左至右:[參加活動]、[互動]、攻擊;攻擊上方是開關,展開時狀態 / 物品 / 裝備 / 任務從開關上方往上長出來,再點開關收回。
+// 預設收合,在輸出區右下角;整組一起拖曳,以下緣定位 (展開、收合時最下面一列不會移動)。
 // 「攻擊」開啟房內可攻擊對象的卷軸選單 (資料來自 [互動] 的 roomInteract 清單),其他按鈕直接送出 data-cmd
 const quickBar = $('quickBar');
 const quickBarItems = $('quickBarItems');
@@ -720,6 +676,7 @@ const quickBarDrag = makeDraggable(quickBar, 'marsII.quickBarPos', () => ({
         if (actionMenuOwner === quickKillButton || actionMenuOwner === interactButton) hideActionMenu();
     }
 });
+const isQuickBarMenuOwner = owner => owner === quickKillButton || owner === interactButton;
 function layoutQuickBar() {
     quickBarDrag.layout();
 }
@@ -751,13 +708,8 @@ quickBarToggle.addEventListener('click', () => setQuickBarCollapsed(!isQuickBarC
 function setQuickBarVisible(visible) {
     if (quickBar.hidden === !visible) return;
     quickBar.hidden = !visible;
-    if (!visible && (actionMenuOwner === quickKillButton || (actionMenuOwner === interactButton && isInteractInQuickBar()))) {
-        hideActionMenu();
-    }
-    if (visible) {
-        syncInteractButtonHost();
-        layoutQuickBar();
-    }
+    if (!visible && isQuickBarMenuOwner(actionMenuOwner)) hideActionMenu();
+    if (visible) layoutQuickBar();
 }
 
 // ===== right-panel 寬度拖移 =====
@@ -1145,7 +1097,7 @@ $('settingsReset').addEventListener('click', () => {
     applyStatusSettings();
     applyTheme('dark-fantasy');
     queueSettingsSave();
-    // 方向鍵、快捷列、懸浮按鈕回到預設位置,快捷列回到預設的收合狀態 (拖到不好按的地方時的退路)
+    // 方向鍵、快捷列回到預設位置,快捷列回到預設的收合狀態 (拖到不好按的地方時的退路)
     setQuickBarCollapsed(true);
     resetDraggablePositions();
 });
@@ -1222,6 +1174,8 @@ function showHotFloat(data) {
 }
 
 function updateChat(data) {
+    // 原本停在底部 (或內容還沒超出) 才自動捲到最新;玩家往上捲動看舊訊息時不打斷
+    const stickToBottom = chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight < 40;
     chatArea.insertAdjacentHTML('beforeend', `<p>${data.msg}</p>`);
     if (currentSettings.notifyChat && 'Notification' in window && Notification.permission === 'granted') {
         const message = chatArea.lastElementChild?.textContent?.trim();
@@ -1235,6 +1189,7 @@ function updateChat(data) {
         }
     }
     while (chatArea.childNodes.length > MAX_CHAT_LINES) chatArea.firstChild.remove();
+    if (stickToBottom) chatArea.scrollTop = chatArea.scrollHeight;
 }
 
 // 每日王城活動的 [參加活動] 浮動按鈕:同時可能有多場活動,只顯示最早開始的一場;
@@ -1253,7 +1208,6 @@ function refreshBossEventButton() {
     bossEventButton.dataset.cmd = `joinbossevent ${next.eventId} ${next.idx} ${next.dateKey}`;
     bossEventButton.title = `參加「${next.name || '活動'}」`;
     bossEventButton.hidden = false;
-    layoutBossEventButton();
 }
 const eventNotifySound = new Audio('./assets/images/event-notify.mp3');
 function updateBossEvent(data) {
@@ -1304,7 +1258,6 @@ function updateRoomInteract(data) {
         ? `互動：${roomInteractItems[0].label || ''}`
         : `互動 (${roomInteractItems.length} 個對象)`;
     interactButton.hidden = false;
-    layoutInteractButton();
 }
 
 // 目前清單中名稱為 label 的 NPC / 玩家的指令;同名的有多個時優先選指令完全相同的那個
@@ -1443,17 +1396,18 @@ function positionActionMenu() {
     const menuH = actionMenu.offsetHeight;
     const margin = 12;
     const gap = 10;
-    // 快捷列 (手機版直排,含 [互動]) 開的選單:貼在按鈕左側、下緣對齊往上長,不蓋住快捷列的其他按鈕
-    // (快捷列的圖層在選單之上,蓋住的話按鈕會壓在選單文字上);左側放不下時退回一般的上下擺放
-    if (actionMenuAnchor.owner?.closest?.('#quickBar') && rect.left - gap - menuW >= margin) {
+    // 快捷列 ([互動]、攻擊) 開的選單:貼在整個快捷列的左側、下緣對齊按鈕往上長,不蓋住快捷列的其他按鈕
+    // (快捷列的圖層在選單之上,蓋住的話按鈕會壓在選單文字上);左側放不下時改放在整個快捷列的上方或下方
+    const barRect = isQuickBarMenuOwner(actionMenuAnchor.owner) ? quickBar.getBoundingClientRect() : null;
+    if (barRect && barRect.left - gap - menuW >= margin) {
         const sideTop = Math.min(Math.max(margin, rect.bottom - menuH), window.innerHeight - menuH - margin);
-        actionMenu.style.left = `${rect.left - gap - menuW}px`;
+        actionMenu.style.left = `${barRect.left - gap - menuW}px`;
         actionMenu.style.top = `${Math.max(margin, sideTop)}px`;
         return;
     }
     const left = Math.min(Math.max(margin, rect.left + rect.width / 2 - menuW / 2), window.innerWidth - menuW - margin);
-    const aboveTop = rect.top - menuH - gap;
-    const belowTop = rect.bottom + gap;
+    const aboveTop = (barRect || rect).top - menuH - gap;
+    const belowTop = (barRect || rect).bottom + gap;
     const fitsAbove = aboveTop >= margin;
     const fitsBelow = belowTop + menuH <= window.innerHeight - margin;
     let top = actionMenuAnchor.preferAbove
@@ -1869,6 +1823,12 @@ function sendRaw(command) {
     resetInactivityTimer();
 }
 
+// say / chat / whisper (含縮寫與伺服器接受的前綴,例:sa、.、ch、wh、whis);比對規則見 src/service/command.js
+const CHAT_COMMAND_RE = /^(\.|sa|say|ch|cha|chat|wh|whi|whis|whisp|whispe|whisper)$/;
+function isChatCommand(message) {
+    return CHAT_COMMAND_RE.test(message.split(/\s+/)[0].toLowerCase());
+}
+
 // 不帶參數時送出輸入框內容
 // silent: true 時不回顯送出的指令文字、也不記錄到指令歷史 (給 [點擊參加] 連結、活動按鈕這類不是玩家手動輸入的指令用)
 function sendMessage(message, { silent = false } = {}) {
@@ -1888,7 +1848,8 @@ function sendMessage(message, { silent = false } = {}) {
     }
 
     if (!silent) {
-        appendOutput(`<span style="color: yellow;">${escapeHtml(message)}</span>\n`);
+        // 聊天指令的內容會出現在聊天區,不再回顯到 output
+        if (!isChatCommand(message)) appendOutput(`<span style="color: yellow;">${escapeHtml(message)}</span>\n`);
         if (!commandHistory.includes(message)) {
             commandHistory.unshift(message);
             if (commandHistory.length > MAX_COMMAND_HISTORY) commandHistory.pop();

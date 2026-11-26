@@ -135,7 +135,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous" referrerpolicy="no-referrer">
     <!-- 樣式與程式在 assets/css、assets/js;部署網頁時要一起上傳。
          修改這些檔案後請更新 ?v= 版本號,避免 Cloudflare / 瀏覽器快取到舊檔 -->
-    <link rel="stylesheet" href="./assets/css/game.css?v=20261123a">
+    <link rel="stylesheet" href="./assets/css/game.css?v=20261123b">
     <link rel="stylesheet" href="./assets/css/theme-dark-fantasy.css?v=20261121">
     <link rel="stylesheet" href="./assets/css/theme-diablo.css?v=20261122">
     <link rel="stylesheet" href="./assets/css/casino.css?v=20261122a">
@@ -344,11 +344,6 @@
                 </div>
             </div>
             <div id="chatArea"></div>
-            <button id="bossEventButton" class="item-link float-button boss-event-button" type="button" data-cmd="" data-silent="true" hidden title="參加活動">
-                <img src="./assets/images/joinworldevent.svg" alt="參加活動" width="48" height="48" decoding="async">
-            </button>
-            <!-- 房間有裝飾物時顯示;只有一個物件時 data-cmd 直接送出,多個時點擊跳出 actionMenu 選擇 -->
-            <button id="interactButton" class="item-link float-button interact-button" type="button" data-cmd="" data-silent="true" hidden title="互動">互動</button>
             <!-- 羊皮卷軸選單:[互動] 多物件選單與房間 NPC / 玩家的點擊選單共用 -->
             <div id="actionMenu" class="scroll-menu" role="menu" aria-labelledby="actionMenuTitle" hidden>
                 <div id="actionMenuTitle" class="scroll-menu-title"></div>
@@ -386,12 +381,19 @@
     </div>
 
     <!-- 以下浮動面板放在 body 第一層:放在 .bottom-container 裡會被手機方向鍵盤蓋住 -->
-    <!-- 快捷指令列 (只在 mobile 顯示):常用指令一鍵送出,減少打字。預設在輸出區右下角,整組可拖曳 (game.js 快捷指令列)
-         直向排列,由下往上:[互動] (手機版由 JS 移進來,沒有對象時保留空位)、攻擊、開關、展開的指令 (狀態 / 物品 / 裝備 / 任務)。
-         用 column-reverse 排版,所以 DOM 順序就是由下往上;展開時往上長,開關與攻擊的位置不動。
+    <!-- 快捷指令列:常用指令一鍵送出,減少打字。預設在輸出區右下角,整組可拖曳 (game.js 快捷指令列)
+         最下面一列由左至右:[參加活動]、[互動]、攻擊 (前兩個沒有對象時保留空位,攻擊與開關的位置不會跳動);
+         攻擊上方是開關與展開的指令 (狀態 / 物品 / 裝備 / 任務)。外層用 column-reverse 排版,DOM 順序就是由下往上,展開時往上長。
          「攻擊」開啟房內可攻擊對象的選單;其他按鈕直接送出 data-cmd (會回顯指令,玩家順便學會指令怎麼打) -->
-    <div id="quickBar" class="quick-bar" role="toolbar" aria-label="快捷指令" aria-orientation="vertical" hidden>
-        <button id="quickKill" class="quick-btn is-danger" type="button" aria-haspopup="menu" title="攻擊 (kill)">攻擊</button>
+    <div id="quickBar" class="quick-bar" role="toolbar" aria-label="快捷指令" hidden>
+        <div class="quick-row">
+            <button id="bossEventButton" class="item-link quick-btn boss-event-button" type="button" data-cmd="" data-silent="true" hidden title="參加活動">
+                <img src="./assets/images/joinworldevent.svg" alt="參加活動" width="48" height="48" decoding="async">
+            </button>
+            <!-- 房間有可互動對象時顯示;只有一個裝飾物時 data-cmd 直接送出,多個時點擊跳出 actionMenu 選擇 -->
+            <button id="interactButton" class="item-link quick-btn interact-button" type="button" data-cmd="" data-silent="true" hidden title="互動">互動</button>
+            <button id="quickKill" class="quick-btn is-danger" type="button" aria-haspopup="menu" title="攻擊 (kill)">攻擊</button>
+        </div>
         <button id="quickBarToggle" class="quick-btn quick-toggle" type="button" aria-expanded="false" aria-controls="quickBarItems" aria-label="展開快捷指令" title="展開快捷指令">
             <svg class="quick-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>
             <svg class="quick-icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
@@ -757,10 +759,10 @@
         <p>詳細介紹請見<a href="./about.html">關於遊戲</a>，資料處理方式請見<a href="./privacy.html">隱私權政策</a>，聯絡方式請見<a href="./about.html#contact">聯絡我們</a>。</p>
     </article>
 
-    <script src="./assets/js/game.js?v=20261123f"></script>
+    <script src="./assets/js/game.js?v=20261123h"></script>
     <script src="./assets/js/casino.js?v=20261123f"></script>
     <script src="./assets/js/hero.js?v=20261123f"></script>
-    <script src="./assets/js/adventurerguild.js?v=20261123f"></script>
+    <script src="./assets/js/adventurerguild.js?v=20261123g"></script>
     <script src="./assets/js/auth.js?v=20261123f"></script>
     <script src="./assets/js/areamap.js?v=20261123f"></script>
     <!-- 所有腳本載入後才連線,收到的訊息才找得到對應的處理函式 -->

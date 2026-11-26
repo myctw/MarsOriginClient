@@ -112,32 +112,6 @@ body.theme-dark-fantasy .status-combat[hidden] {
     font-family: 'Consolas', 'Courier New', monospace;
     line-height: 0.4;
 }
-/* 懸浮按鈕 (活動傳送、互動):懸浮在 chatArea 正上方;位置由 JS 依 chatArea 實際位置計算 (makeFloatingButton) */
-.float-button {
-    position: fixed;
-    width: 44px;
-    height: 44px;
-    padding: 6px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: grab;
-    touch-action: none;
-    user-select: none;
-    z-index: 1001;
-}
-.float-button[hidden] { display: none; }
-.float-button:hover { filter: brightness(1.2); }
-.interact-button {
-    border: 2px solid #ffffff;
-    background: #1a1a1acc;
-    color: #ffffff;
-    font-size: 12px;
-    line-height: 1;
-    padding: 0;
-    box-shadow: 0 0 8px #ffffff66;
-}
 /* 羊皮卷軸選單:房間 NPC / 玩家的點擊選單、多個可互動物件時 [互動] 按鈕的選單共用 (openActionMenu)
    紙面 = 羊皮紙漸層 + 汙漬 + SVG 雜訊紋理,邊緣以內陰影燒焦;上下 ::before/::after 為捲軸木軸 */
 .scroll-menu {
@@ -260,7 +234,9 @@ body.theme-dark-fantasy .status-combat[hidden] {
 /* look 房間時 NPC / 其他玩家行尾的白色 [互動]:點擊跳出羊皮卷軸選單 */
 .entity-link { cursor: pointer; }
 .entity-link:hover { text-decoration: underline; }
-.boss-event-button {
+/* 快捷列的 [參加活動]:金框、呼吸光暈 (加上 .quick-btn 提高權重,蓋過快捷列按鈕的預設外框) */
+.quick-btn.boss-event-button {
+    padding: 6px;
     border: 2px solid #ffd54a;
     background: #1a1a1acc;
     box-shadow: 0 0 10px #ffd54a99;
@@ -677,10 +653,11 @@ body.is-resizing-right-panel { cursor: col-resize; user-select: none; }
 .mobile-numpad .numpad-btn { touch-action: none; }
 .mobile-numpad.is-dragging { opacity: 1; cursor: grabbing; filter: drop-shadow(0 6px 12px #000c); }
 
-/* ===== 快捷指令列 (只在 mobile 顯示) =====
-   直向排列,由下往上:[互動]、攻擊、開關,展開的指令 (狀態 / 物品 / 裝備 / 任務) 從開關上方往上長出來。
-   column-reverse:DOM 順序就是由下往上。位置由 JS 計算 (預設在輸出區右下角,以下緣定位),整組可拖曳。
-   每顆按鈕都是 44px 圓形、間距 8px (觸控尺寸);外層透明,只有按鈕本身有底色 */
+/* ===== 快捷指令列 =====
+   最下面一列 (.quick-row) 由左至右:[參加活動]、[互動]、攻擊;攻擊正上方是開關,展開的指令 (狀態 / 物品 / 裝備 / 任務) 從開關上方往上長出來。
+   外層 column-reverse:DOM 順序就是由下往上;align-items:flex-end 讓開關那一欄對齊最右邊的攻擊。
+   位置由 JS 計算 (預設在輸出區右下角,以下緣定位),整組可拖曳。
+   每顆按鈕都是 44px 圓形、間距 8px (觸控尺寸);外層透明且不接點擊 (列變寬後,開關左邊的空白不能擋住底下的文字),只有按鈕本身可以點、可以拖 */
 .quick-bar {
     --quick-btn-bg: #1d1712f2;
     --quick-btn-border: #c8a96ab3;
@@ -693,9 +670,10 @@ body.is-resizing-right-panel { cursor: col-resize; user-select: none; }
     position: fixed;
     display: flex;
     flex-direction: column-reverse;
-    align-items: center;
+    align-items: flex-end;
     gap: 8px;
     z-index: 1001;
+    pointer-events: none;
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
@@ -706,12 +684,13 @@ body.is-resizing-right-panel { cursor: col-resize; user-select: none; }
 /* 設定面板開著時不顯示快捷列與方向鍵:兩者圖層較高,會壓在面板上 (手機版面板幾乎佔滿畫面) */
 body:has(#settingsPanel:not([hidden])) .quick-bar,
 body:has(#settingsPanel:not([hidden])) .mobile-numpad { visibility: hidden; }
-.quick-bar.is-dragging { cursor: grabbing; }
+/* 拖曳中外層要能接到指標事件 (setPointerCapture 在外層) */
+.quick-bar.is-dragging { cursor: grabbing; pointer-events: auto; }
 .quick-bar.is-dragging .quick-btn { box-shadow: 0 8px 18px #000d; }
+.quick-row { display: flex; flex-direction: row; align-items: center; gap: 8px; }
 .quick-items { display: flex; flex-direction: column-reverse; align-items: center; gap: 8px; }
 .quick-items[hidden] { display: none; }
-.quick-btn,
-.quick-bar > .interact-button {
+.quick-btn {
     position: static;
     flex: 0 0 auto;
     display: flex;
@@ -729,17 +708,15 @@ body:has(#settingsPanel:not([hidden])) .mobile-numpad { visibility: hidden; }
     font-weight: 600;
     line-height: 1;
     letter-spacing: 0;
+    pointer-events: auto;
     touch-action: none;
     cursor: inherit;
     transition: transform 120ms ease-out, background-color 120ms ease-out;
 }
-/* [互動] 沒有對象時保留空位:攻擊與開關的位置不會隨著換房間跳動 (visibility:hidden 也不會接到點擊) */
-.quick-bar > .interact-button[hidden] { display: flex !important; visibility: hidden; }
-.quick-btn:active,
-.quick-bar > .interact-button:active { transform: scale(0.94); background: var(--quick-btn-press); }
-.quick-btn:focus-visible,
-.quick-bar > .interact-button:focus-visible { outline: 2px solid var(--quick-focus); outline-offset: 2px; }
-.quick-bar > .interact-button:hover { filter: none; }
+/* [參加活動]、[互動] 沒有對象時保留空位:攻擊與開關的位置不會跟著跳動 (visibility:hidden 也不會接到點擊) */
+.quick-row > .quick-btn[hidden] { display: flex !important; visibility: hidden; }
+.quick-btn:active { transform: scale(0.94); background: var(--quick-btn-press); }
+.quick-btn:focus-visible { outline: 2px solid var(--quick-focus); outline-offset: 2px; }
 .quick-btn.is-danger { border-color: var(--quick-danger); color: var(--quick-danger-text); }
 .quick-toggle svg { width: 20px; height: 20px; }
 .quick-toggle .quick-icon-expand { color: var(--quick-focus); }
@@ -753,8 +730,8 @@ body:has(#settingsPanel:not([hidden])) .mobile-numpad { visibility: hidden; }
     to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .quick-btn, .quick-bar > .interact-button { transition: none; }
-    .quick-btn:active, .quick-bar > .interact-button:active { transform: none; }
+    .quick-btn { transition: none; }
+    .quick-btn:active { transform: none; }
     .quick-items:not([hidden]) .quick-btn { animation: none; }
 }
 
